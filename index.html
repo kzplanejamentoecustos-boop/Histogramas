@@ -76,6 +76,13 @@
   table.pcc-table tbody tr:hover{background:#f2f6fa;}
   .table-scroll{max-height:520px; overflow:auto; border:1px solid var(--border); border-radius:8px;}
 
+  .tab-nav{display:flex; gap:8px; margin-bottom:20px; border-bottom:2px solid var(--border);}
+  .tab-btn{background:none; border:none; border-bottom:3px solid transparent; border-radius:0; padding:12px 18px; font-size:14px; font-weight:700; color:var(--text-muted); cursor:pointer; margin-bottom:-2px;}
+  .tab-btn:hover{color:var(--secondary);}
+  .tab-btn.active{color:var(--primary); border-bottom-color:var(--secondary);}
+  .tab-panel[hidden]{display:none;}
+  .toolbar-local{background:var(--bg-card); border-radius:10px; box-shadow:var(--shadow); padding:14px 20px; margin-bottom:20px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;}
+
   .badge{display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600;}
   .badge-success{background:#e3f6ec; color:var(--success);}
   .badge-warning{background:#fdf6d8; color:#8a7208;}
@@ -151,58 +158,129 @@
       <input type="date" id="input-obra-termino" style="padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:13px;">
     </label>
     <button class="btn-secondary" id="btn-aplicar-periodo">Aplicar período</button>
-    <button class="btn-primary" id="btn-lancar">➕ Lançar Efetivo Realizado</button>
-    <button class="btn-secondary" id="btn-export-png">🖼️ Exportar PNG do Gráfico</button>
     <button class="btn-secondary" id="btn-export-json">⬇️ Exportar JSON</button>
     <button class="btn-secondary" id="btn-import-json">⬆️ Importar JSON</button>
     <input type="file" id="import-input" accept="application/json">
     <button class="btn-accent" id="btn-nuvem-carregar">☁️ Carregar da Nuvem</button>
     <button class="btn-accent" id="btn-nuvem-salvar">☁️ Salvar Nova Versão</button>
+    <button class="btn-primary" id="btn-nuvem-atualizar" style="display:none;" title="Sobrescreve a versão atualmente carregada com os dados de agora">💾 Atualizar Versão Salva</button>
+    <span id="nuvem-versao-atual-label" style="display:none; font-size:13px; font-weight:600; color:var(--text-muted); align-items:center;">Versão carregada: <strong id="nuvem-versao-atual-nome" style="margin-left:4px;"></strong></span>
     <label style="font-size:13px; font-weight:600; color:var(--text-muted); display:flex; align-items:center; gap:8px; margin-left:8px;">
       Mês vigente:
       <select id="select-mes-vigente" style="padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:13px;"></select>
     </label>
     <div class="grow"></div>
-    <button class="btn-accent" id="btn-reset-previsto">↺ Restaurar Previsto Original (limpar edições semanais)</button>
-    <button class="btn-accent" id="btn-reset">↺ Restaurar Previsto (limpar realizado)</button>
-  </div>
-  <div id="aviso-periodo" style="display:none; font-size:13px; font-weight:600; color:#b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:8px 14px; margin:-14px 0 20px;"></div>
-
-  <div class="card">
-    <h2>Histograma de Mão de Obra — Efetivo Total por Mês</h2>
-    <div class="card-sub" id="chart-card-sub">Carregando período da obra…</div>
-    <div class="chart-wrap"><canvas id="chart-efetivo"></canvas></div>
   </div>
 
-  <div class="card">
-    <h2>Detalhamento por Função — Efetivo Previsto (Pico)</h2>
-    <div class="card-sub">81 funções cadastradas no histograma contratual · Ordenado por pico decrescente</div>
-    <div class="table-scroll">
-      <table class="pcc-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Função</th>
-            <th class="num">Pico Previsto</th>
-            <th>% do Pico Teórico</th>
-          </tr>
-        </thead>
-        <tbody id="tbody-funcoes"></tbody>
-      </table>
+  <div class="tab-nav">
+    <button class="tab-btn active" data-tab="mao-de-obra" type="button">👷 Mão de Obra</button>
+    <button class="tab-btn" data-tab="equipamentos" type="button">🚜 Equipamentos</button>
+  </div>
+
+  <div id="tab-mao-obra" class="tab-panel">
+
+    <div class="toolbar-local">
+      <button class="btn-primary" id="btn-lancar">➕ Lançar Efetivo Realizado</button>
+      <button class="btn-secondary" id="btn-export-png">🖼️ Exportar PNG do Gráfico</button>
+      <div class="grow"></div>
+      <button class="btn-accent" id="btn-reset-previsto">↺ Restaurar Previsto Original (limpar edições semanais)</button>
+      <button class="btn-accent" id="btn-reset">↺ Restaurar Previsto (limpar realizado)</button>
     </div>
+    <div id="aviso-periodo" style="display:none; font-size:13px; font-weight:600; color:#b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:8px 14px; margin:-10px 0 20px;"></div>
+
+    <div class="card">
+      <h2>Histograma de Mão de Obra — Efetivo Total por Mês</h2>
+      <div class="card-sub" id="chart-card-sub">Carregando período da obra…</div>
+      <div class="chart-wrap"><canvas id="chart-efetivo"></canvas></div>
+    </div>
+
+    <div class="card">
+      <h2>Detalhamento por Função — Efetivo Previsto (Pico)</h2>
+      <div class="card-sub">81 funções cadastradas no histograma contratual · Ordenado por pico decrescente</div>
+      <div class="table-scroll">
+        <table class="pcc-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Função</th>
+              <th class="num">Pico Previsto</th>
+              <th>% do Pico Teórico</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-funcoes"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Lançamentos de Efetivo Realizado</h2>
+      <div class="card-sub" id="lancamentos-card-sub">Histórico de apontamentos mensais informados manualmente</div>
+      <div class="table-scroll" style="max-height:300px;">
+        <table class="pcc-table">
+          <thead>
+            <tr><th>Mês</th><th class="num">Previsto</th><th class="num">Mobilizados</th><th class="num">Em Mobilização</th><th class="num">Total Realizado</th><th class="num">Desvio</th><th>Status</th></tr>
+          </thead>
+          <tbody id="tbody-lancamentos"></tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 
-  <div class="card">
-    <h2>Lançamentos de Efetivo Realizado</h2>
-    <div class="card-sub" id="lancamentos-card-sub">Histórico de apontamentos mensais informados manualmente</div>
-    <div class="table-scroll" style="max-height:300px;">
-      <table class="pcc-table">
-        <thead>
-          <tr><th>Mês</th><th class="num">Previsto</th><th class="num">Mobilizados</th><th class="num">Em Mobilização</th><th class="num">Total Realizado</th><th class="num">Desvio</th><th>Status</th></tr>
-        </thead>
-        <tbody id="tbody-lancamentos"></tbody>
-      </table>
+  <div id="tab-equipamentos" class="tab-panel" hidden>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Pico de Referência (maior valor do Previsto)</div>
+        <div class="kpi-value" id="eq-kpi-pico-teorico">–</div>
+        <div class="kpi-delta">Atualizado junto com a curva de Previsto</div>
+      </div>
+      <div class="kpi-card accent">
+        <div class="kpi-label">Pico Previsto (mês com maior quantidade)</div>
+        <div class="kpi-value" id="eq-kpi-pico-mes">–</div>
+        <div class="kpi-delta" id="eq-kpi-pico-mes-quando">–</div>
+      </div>
+      <div class="kpi-card success" id="eq-kpi-atual-card">
+        <div class="kpi-label">Equipamentos Realizado (mês de referência)</div>
+        <div class="kpi-value" id="eq-kpi-realizado-atual">Sem lançamento</div>
+        <div class="kpi-delta" id="eq-kpi-realizado-mes">–</div>
+      </div>
+      <div class="kpi-card" id="eq-kpi-desvio-card">
+        <div class="kpi-label">Desvio vs. Previsto (mês de referência)</div>
+        <div class="kpi-value" id="eq-kpi-desvio">–</div>
+        <div class="kpi-delta" id="eq-kpi-desvio-pct">–</div>
+      </div>
     </div>
+
+    <div class="toolbar-local">
+      <button class="btn-primary" id="eq-btn-lancar">➕ Lançar Equipamentos Realizado</button>
+      <button class="btn-secondary" id="eq-btn-export-png">🖼️ Exportar PNG do Gráfico</button>
+      <div class="grow"></div>
+      <button class="btn-accent" id="eq-btn-reset-previsto">↺ Restaurar Previsto Original (limpar edições semanais)</button>
+      <button class="btn-accent" id="eq-btn-reset">↺ Restaurar Previsto (limpar realizado)</button>
+    </div>
+    <div id="eq-aviso-periodo" style="display:none; font-size:13px; font-weight:600; color:#b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:8px 14px; margin:-10px 0 20px;"></div>
+
+    <div class="card">
+      <h2>Histograma de Equipamentos — Quantidade Total por Mês</h2>
+      <div class="card-sub" id="eq-chart-card-sub">Carregando período da obra…</div>
+      <div class="chart-wrap"><canvas id="eq-chart-efetivo"></canvas></div>
+    </div>
+
+    <div class="card">
+      <h2>Lançamentos de Equipamentos Realizado</h2>
+      <div class="card-sub" id="eq-lancamentos-card-sub">Histórico de apontamentos mensais informados manualmente</div>
+      <div class="card-sub" style="margin-top:-10px;">Obs.: só está disponível a curva total de equipamentos (sem detalhamento por tipo de equipamento) — por isso não há uma tabela de "Detalhamento por Função" equivalente nesta aba.</div>
+      <div class="table-scroll" style="max-height:300px;">
+        <table class="pcc-table">
+          <thead>
+            <tr><th>Mês</th><th class="num">Previsto</th><th class="num">Mobilizados</th><th class="num">Em Mobilização</th><th class="num">Total Realizado</th><th class="num">Desvio</th><th>Status</th></tr>
+          </thead>
+          <tbody id="eq-tbody-lancamentos"></tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 
 </div>
@@ -224,6 +302,7 @@
     <label>Efetivo em Mobilização (em processo de admissão/deslocamento)</label>
     <input type="number" id="input-em-mob" min="0" step="0.5" placeholder="Ex: 15">
     <div class="modal-actions">
+      <button class="btn-secondary" id="btn-zerar-lancamento" style="display:none; margin-right:auto;">🗑️ Zerar lançamento</button>
       <button class="btn-secondary" id="btn-cancelar">Cancelar</button>
       <button class="btn-primary" id="btn-salvar">Salvar</button>
     </div>
@@ -240,6 +319,38 @@
     <div class="modal-actions">
       <button class="btn-secondary" id="btn-previsto-cancelar">Cancelar</button>
       <button class="btn-primary" id="btn-previsto-salvar">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de lançamento — Equipamentos -->
+<div class="modal-overlay" id="eq-modal-lancar">
+  <div class="modal">
+    <h3>Lançar Equipamentos Realizado</h3>
+    <label>Mês/Semana de referência</label>
+    <select id="eq-input-mes"></select>
+    <label>Equipamentos Mobilizados (já em operação na obra)</label>
+    <input type="number" id="eq-input-mob" min="0" step="0.5" placeholder="Ex: 25">
+    <label>Equipamentos em Mobilização (em transporte/liberação)</label>
+    <input type="number" id="eq-input-em-mob" min="0" step="0.5" placeholder="Ex: 15">
+    <div class="modal-actions">
+      <button class="btn-secondary" id="eq-btn-zerar-lancamento" style="display:none; margin-right:auto;">🗑️ Zerar lançamento</button>
+      <button class="btn-secondary" id="eq-btn-cancelar">Cancelar</button>
+      <button class="btn-primary" id="eq-btn-salvar">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de edição do Previsto (semana do mês vigente) — Equipamentos -->
+<div class="modal-overlay" id="eq-modal-previsto">
+  <div class="modal">
+    <h3>Editar Previsto da Semana — Equipamentos</h3>
+    <div class="card-sub" style="margin-bottom:10px;" id="eq-previsto-slot-label">–</div>
+    <label>Quantidade Prevista de Equipamentos</label>
+    <input type="number" id="eq-input-previsto-semana" min="0" step="1" placeholder="Ex: 82">
+    <div class="modal-actions">
+      <button class="btn-secondary" id="eq-btn-previsto-cancelar">Cancelar</button>
+      <button class="btn-primary" id="eq-btn-previsto-salvar">Salvar</button>
     </div>
   </div>
 </div>
@@ -283,37 +394,73 @@ const N_MESES_DADOS_REAIS = TOTAL_PREVISTO_BASE.length; // 24 — limite de dado
 let MESES_LABELS = Array.from({length: N_MESES_DADOS_REAIS}, (_, i) => `Mês ${String(i + 1).padStart(2, '0')}`);
 let TOTAL_PREVISTO = TOTAL_PREVISTO_BASE.slice(0, MESES_LABELS.length);
 
+/* ==================== DADOS — EQUIPAMENTOS ====================
+   Extraído da imagem "Quantidade Total de Equipamentos" enviada pelo usuário (curva total
+   mensal, 22 meses) — NÃO há detalhamento por tipo de equipamento disponível, só o total.
+   EQ_PICO_TEORICO é uma INFERÊNCIA (não um dado contratual informado): usamos o maior valor
+   da própria curva de Previsto como referência de pico, já que nenhum valor de pico teórico
+   separado foi fornecido para equipamentos. */
+const EQ_TOTAL_PREVISTO_BASE = [1, 15, 19, 53, 71, 69, 77, 78, 78, 82, 82, 82, 85, 82, 82, 80, 75, 60, 43, 27, 17, 13]; // extraído da imagem (22 meses)
+const EQ_PICO_TEORICO = Math.max(...EQ_TOTAL_PREVISTO_BASE); // inferência: maior valor da curva de Previsto (não é um dado contratual explícito)
+const EQ_N_MESES_DADOS_REAIS = EQ_TOTAL_PREVISTO_BASE.length; // 22
+let EQ_MESES_LABELS = Array.from({length: EQ_N_MESES_DADOS_REAIS}, (_, i) => `Mês ${String(i + 1).padStart(2, '0')}`);
+let EQ_TOTAL_PREVISTO = EQ_TOTAL_PREVISTO_BASE.slice(0, EQ_MESES_LABELS.length);
+
 /* ==================== CALENDÁRIO / SEMANAS ==================== */
-// MESES_LABELS[0] = "Mês 01" do contrato; cada índice seguinte = +1 mês corrido.
-// A data-base (CONTRATO_ANO_INICIO/CONTRATO_MES_INICIO) vem da data de "Início da obra"
-// informada pelo usuário; é usada internamente só para calcular quantos dias cada mês tem
-// (para dividir em semanas) e para detectar o mês vigente pela data de hoje.
+// MESES_LABELS[0] = "Mês 01" do contrato; cada índice seguinte = +1 mês corrido, mas os
+// meses são âncorados no DIA EXATO informado em "Início da obra" (CONTRATO_DIA_INICIO) —
+// não são forçados a começar sempre no dia 1 do mês-calendário. Ex.: início em 16/07/2026 →
+// "Mês 01" vai de 16/07 a 15/08 (31 dias, o mesmo nº de dias de julho); "Mês 02" começa em
+// 16/08. Isso usa datas em UTC (meio-dia fixo) só para aritmética de dias corridos, evitando
+// bugs de fuso-horário/horário de verão — a exibição sempre usa os componentes dd/mm/aaaa
+// extraídos dessas datas UTC, não a hora.
 let CONTRATO_ANO_INICIO = 2026;
 let CONTRATO_MES_INICIO = 8; // agosto
-function indiceParaAnoMes(i){
-  const total = (CONTRATO_MES_INICIO - 1) + i;
-  return { ano: CONTRATO_ANO_INICIO + Math.floor(total/12), mes: (total % 12) + 1 };
+let CONTRATO_DIA_INICIO = 1;
+function dataUTC(ano, mes, dia){ return new Date(Date.UTC(ano, mes - 1, dia)); }
+function addDiasUTC(data, n){ return new Date(data.getTime() + n * 86400000); }
+function partesDataUTC(data){ return { ano: data.getUTCFullYear(), mes: data.getUTCMonth() + 1, dia: data.getUTCDate() }; }
+function diasNoMes(ano, mes){ return new Date(Date.UTC(ano, mes, 0)).getUTCDate(); }
+function obraInicioUTC(){ return dataUTC(CONTRATO_ANO_INICIO, CONTRATO_MES_INICIO, CONTRATO_DIA_INICIO); }
+// Calcula, para os primeiros `numMeses` meses do contrato, a data de início real (UTC) e a
+// duração em dias de cada um — cada "mês" dura o mesmo nº de dias do mês-calendário em que
+// ele começa (ex.: um mês que começa em 16/07 dura 31 dias, como julho; um que começa em
+// 16/02 dura 28 ou 29, como fevereiro), preservando o dia exato informado em "Início da obra"
+// em vez de arredondar sempre para o dia 1.
+function calcularLimitesMeses(numMeses){
+  const limites = [];
+  let cursor = obraInicioUTC();
+  for (let i = 0; i < numMeses; i++){
+    const p = partesDataUTC(cursor);
+    const duracao = diasNoMes(p.ano, p.mes);
+    limites.push({ start: cursor, duracao });
+    cursor = addDiasUTC(cursor, duracao);
+  }
+  return limites;
 }
 // Retorna o índice do mês vigente (hoje), ou -1 se hoje está fora do período do contrato.
 function mesVigenteIndex(){
   const hojeD = new Date();
-  const y = hojeD.getFullYear(), m = hojeD.getMonth() + 1;
-  const diff = (y - CONTRATO_ANO_INICIO) * 12 + (m - CONTRATO_MES_INICIO);
-  return (diff >= 0 && diff < MESES_LABELS.length) ? diff : -1;
+  const hojeUTC = dataUTC(hojeD.getFullYear(), hojeD.getMonth() + 1, hojeD.getDate());
+  const limites = calcularLimitesMeses(MESES_LABELS.length);
+  for (let i = 0; i < limites.length; i++){
+    const fimExclusivo = addDiasUTC(limites[i].start, limites[i].duracao);
+    if (hojeUTC.getTime() >= limites[i].start.getTime() && hojeUTC.getTime() < fimExclusivo.getTime()) return i;
+  }
+  return -1;
 }
-function diasNoMes(ano, mes){ return new Date(ano, mes, 0).getDate(); }
-// Semanas variáveis: dias do mês ÷ 7 (blocos de 7 dias corridos; a última semana do mês
-// pode ficar menor quando o mês não é múltiplo de 7). Ex.: mês de 30 dias → 5 semanas
-// (7+7+7+7+2).
+// Semanas variáveis: dias do mês ÷ 7 (blocos de 7 dias corridos a partir do dia exato de
+// início daquele mês; a última semana fica menor quando o mês não é múltiplo de 7). Cada
+// semana carrega também sua data real de início/fim (startDate/endDate, UTC) para exibição.
 function semanasDoMes(monthIdx){
-  const { ano, mes } = indiceParaAnoMes(monthIdx);
-  const totalDias = diasNoMes(ano, mes);
+  const limites = calcularLimitesMeses(MESES_LABELS.length);
+  const { start, duracao } = limites[monthIdx];
   const semanas = [];
-  let start = 1, n = 1;
-  while (start <= totalDias){
-    const end = Math.min(start + 6, totalDias);
-    semanas.push({ n, start, end, monthIdx });
-    start = end + 1;
+  let s0 = 1, n = 1;
+  while (s0 <= duracao){
+    const e0 = Math.min(s0 + 6, duracao);
+    semanas.push({ n, start: s0, end: e0, monthIdx, startDate: addDiasUTC(start, s0 - 1), endDate: addDiasUTC(start, e0 - 1) });
+    s0 = e0 + 1;
     n++;
   }
   return semanas;
@@ -344,22 +491,82 @@ function construirSlots(){
   return slots;
 }
 let SLOTS = construirSlots();
+// Formata uma data do calendário real (ano/mês do contrato + dia do mês) como "dd/mm" ou
+// "dd/mm/aaaa". Usado para mostrar a que dias do calendário cada semana corresponde — antes
+// o rótulo mostrava só o número do dia dentro do mês (ex. "01–07"), sem indicar a que mês/ano
+// aquilo pertencia, o que na prática parecia contagem solta de dias corridos do período.
+function fmtDataCalendario(dataUTCObj, comAno){
+  const p = partesDataUTC(dataUTCObj);
+  const dd = String(p.dia).padStart(2,'0');
+  const mm = String(p.mes).padStart(2,'0');
+  return comAno ? `${dd}/${mm}/${p.ano}` : `${dd}/${mm}`;
+}
+function semanaRangeTexto(slot, comAno){
+  const s = slot.semana;
+  return `${fmtDataCalendario(s.startDate, comAno)} – ${fmtDataCalendario(s.endDate, comAno)}`;
+}
 function slotLabelEixo(slot){
   return slot.kind === 'week'
-    ? [MESES_LABELS[slot.monthIdx], `S${slot.semana.n}`]
+    ? [MESES_LABELS[slot.monthIdx], `S${slot.semana.n}`, semanaRangeTexto(slot, false)]
     : MESES_LABELS[slot.monthIdx];
 }
 function slotLabelCompleto(slot){
   if (slot.kind === 'week'){
-    const s = slot.semana;
-    const dd = n => String(n).padStart(2,'0');
-    return `${MESES_LABELS[slot.monthIdx]} — Semana ${s.n} (${dd(s.start)}–${dd(s.end)})`;
+    return `${MESES_LABELS[slot.monthIdx]} — Semana ${slot.semana.n} (${semanaRangeTexto(slot, true)})`;
   }
   return MESES_LABELS[slot.monthIdx];
 }
 function slotKey(slot){
   return slot.kind === 'week' ? `w:${slot.monthIdx}:${slot.semana.n}` : `m:${slot.monthIdx}`;
 }
+
+/* ==================== CALENDÁRIO / SLOTS — EQUIPAMENTOS ====================
+   Reaproveita o MESMO calendário (dataUTC/addDiasUTC/calcularLimitesMeses/obraInicioUTC) —
+   é a mesma obra, mesma data de início — só que com o próprio comprimento (22 meses de dados
+   de equipamentos, vs. 24 de mão de obra) e o próprio "mês vigente" derivado do global
+   MES_VIGENTE_IDX (mão de obra), truncado se a obra de equipamentos já tiver "acabado"
+   (comprimento menor). */
+function calcularEqMesVigenteIdx(){
+  return (MES_VIGENTE_IDX >= 0 && MES_VIGENTE_IDX < EQ_MESES_LABELS.length) ? MES_VIGENTE_IDX : -1;
+}
+let EQ_MES_VIGENTE_IDX = calcularEqMesVigenteIdx();
+function eqSemanasDoMes(monthIdx){
+  const limites = calcularLimitesMeses(EQ_MESES_LABELS.length);
+  const { start, duracao } = limites[monthIdx];
+  const semanas = [];
+  let s0 = 1, n = 1;
+  while (s0 <= duracao){
+    const e0 = Math.min(s0 + 6, duracao);
+    semanas.push({ n, start: s0, end: e0, monthIdx, startDate: addDiasUTC(start, s0 - 1), endDate: addDiasUTC(start, e0 - 1) });
+    s0 = e0 + 1;
+    n++;
+  }
+  return semanas;
+}
+function construirEqSlots(){
+  const slots = [];
+  for (let i = 0; i < EQ_MESES_LABELS.length; i++){
+    if (i === EQ_MES_VIGENTE_IDX){
+      eqSemanasDoMes(i).forEach(s => slots.push({ kind:'week', monthIdx:i, semana:s }));
+    } else {
+      slots.push({ kind:'month', monthIdx:i });
+    }
+  }
+  return slots;
+}
+let EQ_SLOTS = construirEqSlots();
+function eqSlotLabelEixo(slot){
+  return slot.kind === 'week'
+    ? [EQ_MESES_LABELS[slot.monthIdx], `S${slot.semana.n}`, semanaRangeTexto(slot, false)]
+    : EQ_MESES_LABELS[slot.monthIdx];
+}
+function eqSlotLabelCompleto(slot){
+  if (slot.kind === 'week'){
+    return `${EQ_MESES_LABELS[slot.monthIdx]} — Semana ${slot.semana.n} (${semanaRangeTexto(slot, true)})`;
+  }
+  return EQ_MESES_LABELS[slot.monthIdx];
+}
+// slotKey(slot) é genérico (não depende de rótulos) — reaproveitado como está para os slots de equipamentos.
 
 
 /* ==================== PREVISTO EDITÁVEL POR SEMANA (mês vigente) ==================== */
@@ -416,6 +623,49 @@ function finalizarMesesFechados(){
   });
   if (mudou) salvarPrevistoMensalOverride();
 }
+
+/* ==================== PREVISTO EDITÁVEL POR SEMANA — EQUIPAMENTOS ==================== */
+const EQ_PREVISTO_STORAGE_KEY = 'equip_previsto_semanal_v1';
+let eqPrevistoSemanal = JSON.parse(localStorage.getItem(EQ_PREVISTO_STORAGE_KEY) || '{}');
+function salvarEqPrevistoSemanal(){ localStorage.setItem(EQ_PREVISTO_STORAGE_KEY, JSON.stringify(eqPrevistoSemanal)); }
+function getEqSemanaPrevisto(monthIdx, n){
+  const v = eqPrevistoSemanal[`w:${monthIdx}:${n}`];
+  return (v === undefined || v === null) ? null : v;
+}
+const EQ_PREVISTO_MENSAL_KEY = 'equip_previsto_mensal_override_v1';
+let eqPrevistoMensalOverride = JSON.parse(localStorage.getItem(EQ_PREVISTO_MENSAL_KEY) || '{}');
+function salvarEqPrevistoMensalOverride(){ localStorage.setItem(EQ_PREVISTO_MENSAL_KEY, JSON.stringify(eqPrevistoMensalOverride)); }
+function getEqMonthPrevisto(monthIdx){
+  const v = eqPrevistoMensalOverride[monthIdx];
+  return (v === undefined || v === null) ? EQ_TOTAL_PREVISTO[monthIdx] : v;
+}
+function getEqSlotPrevisto(slot){
+  if (slot.kind === 'week'){
+    const v = getEqSemanaPrevisto(slot.monthIdx, slot.semana.n);
+    return v !== null ? v : getEqMonthPrevisto(slot.monthIdx);
+  }
+  return getEqMonthPrevisto(slot.monthIdx);
+}
+function finalizarEqMesesFechados(){
+  let mudou = false;
+  EQ_MESES_LABELS.forEach((_, monthIdx) => {
+    if (monthIdx === EQ_MES_VIGENTE_IDX) return;
+    const semanas = eqSemanasDoMes(monthIdx);
+    for (let n = semanas.length; n >= 1; n--){
+      const v = getEqSemanaPrevisto(monthIdx, n);
+      if (v !== null){
+        if (eqPrevistoMensalOverride[monthIdx] !== v){ eqPrevistoMensalOverride[monthIdx] = v; mudou = true; }
+        break;
+      }
+    }
+  });
+  if (mudou) salvarEqPrevistoMensalOverride();
+}
+
+/* ==================== ESTADO / PERSISTÊNCIA — EQUIPAMENTOS ==================== */
+const EQ_STORAGE_KEY = 'equip_realizado_v1';
+let eqRealizado = JSON.parse(localStorage.getItem(EQ_STORAGE_KEY) || '{}');
+function salvarEqRealizado(){ localStorage.setItem(EQ_STORAGE_KEY, JSON.stringify(eqRealizado)); }
 
 /* ==================== ESTADO / PERSISTÊNCIA ==================== */
 const STORAGE_KEY = 'efetivo_mo_realizado_v2';
@@ -493,6 +743,16 @@ function getSlotEntry(slot){
   }
   return null;
 }
+
+// NOTA (v11, correção de regressão): esta função existiu por uma versão (v9) para "gravar
+// permanentemente" o valor do mês fechado numa chave "m:<índice>", em vez de deixar só no
+// cálculo dinâmico do getSlotEntry acima. Isso causou um bug real: como só gravava a chave
+// "m:" na PRIMEIRA vez que o mês fechava e nunca mais atualizava (`if (realizado[...]) return`),
+// se o usuário voltasse a esse mês depois (pelo seletor "Mês vigente", para corrigir/completar
+// uma semana) e avançasse de novo, o valor fechado ficava TRAVADO na primeira foto, ignorando
+// as edições novas — exatamente o sintoma relatado ("preencho a semana mas o mês fechado não
+// mostra o valor certo"). Removida: getSlotEntry já calcula corretamente o valor do mês fechado
+// (última semana lançada) em tempo real, sem risco de ficar desatualizado.
 function getSlotMob(slot){ const r = getSlotEntry(slot); return r ? (r.mob || 0) : null; }
 function getSlotEmMob(slot){ const r = getSlotEntry(slot); return r ? (r.emMob || 0) : null; }
 function getSlotTotal(slot){
@@ -503,6 +763,31 @@ function getSlotTotal(slot){
 function buildMobArray(){ return SLOTS.map(s => { const v = getSlotMob(s); return v === null ? null : v; }); }
 function buildEmMobArray(){ return SLOTS.map(s => { const v = getSlotEmMob(s); return v === null ? null : v; }); }
 function buildPrevistoArray(){ return SLOTS.map(s => getSlotPrevisto(s)); }
+
+// ---- Equivalentes para EQUIPAMENTOS (mesmo padrão dinâmico do getSlotEntry — sem cache) ----
+function getEqSlotEntry(slot){
+  if (slot.kind === 'week'){
+    return eqRealizado[slotKey(slot)] || null;
+  }
+  const direto = eqRealizado[slotKey(slot)];
+  if (direto) return direto;
+  const semanas = eqSemanasDoMes(slot.monthIdx);
+  for (let n = semanas.length; n >= 1; n--){
+    const w = eqRealizado[`w:${slot.monthIdx}:${n}`];
+    if (w) return w;
+  }
+  return null;
+}
+function getEqSlotMob(slot){ const r = getEqSlotEntry(slot); return r ? (r.mob || 0) : null; }
+function getEqSlotEmMob(slot){ const r = getEqSlotEntry(slot); return r ? (r.emMob || 0) : null; }
+function getEqSlotTotal(slot){
+  const r = getEqSlotEntry(slot);
+  if (!r) return null;
+  return (r.mob || 0) + (r.emMob || 0);
+}
+function buildEqMobArray(){ return EQ_SLOTS.map(s => { const v = getEqSlotMob(s); return v === null ? null : v; }); }
+function buildEqEmMobArray(){ return EQ_SLOTS.map(s => { const v = getEqSlotEmMob(s); return v === null ? null : v; }); }
+function buildEqPrevistoArray(){ return EQ_SLOTS.map(s => getEqSlotPrevisto(s)); }
 
 // Plugin customizado para desenhar rótulos (sem depender de plugin externo — funciona 100% offline)
 // - Previsto: rótulo simples acima da barra.
@@ -598,6 +883,43 @@ const mesVigenteHighlightPlugin = {
     // Previsto e Realizado ficam em barras separadas (stacks diferentes) dentro da
     // mesma categoria; usamos a borda mais externa entre as duas para não cortar
     // a barra empilhada de Realizado quando ela fica mais à direita.
+    const pad = 6;
+    const leftCandidates = [primeiroPrevisto.x - (primeiroPrevisto.width || 0) / 2];
+    const rightCandidates = [ultimoPrevisto.x + (ultimoPrevisto.width || 0) / 2];
+    if (primeiroMob) leftCandidates.push(primeiroMob.x - (primeiroMob.width || 0) / 2);
+    if (ultimoMob) rightCandidates.push(ultimoMob.x + (ultimoMob.width || 0) / 2);
+    const left = Math.min(...leftCandidates) - pad;
+    const right = Math.max(...rightCandidates) + pad;
+    const top = chartArea.top + 2;
+    const bottom = chartArea.bottom - 2;
+
+    ctx.save();
+    ctx.strokeStyle = '#e63946';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([]);
+    ctx.strokeRect(left, top, right - left, bottom - top);
+    ctx.restore();
+  }
+};
+
+// Mesmo plugin de destaque do "Mês vigente", mas para o gráfico de Equipamentos.
+const eqMesVigenteHighlightPlugin = {
+  id: 'eqMesVigenteHighlight',
+  beforeDatasetsDraw(chartInstance){
+    if (EQ_MES_VIGENTE_IDX < 0) return;
+    const indices = [];
+    EQ_SLOTS.forEach((s, i) => { if (s.kind === 'week' && s.monthIdx === EQ_MES_VIGENTE_IDX) indices.push(i); });
+    if (!indices.length) return;
+
+    const { ctx, chartArea } = chartInstance;
+    const metaPrevisto = chartInstance.getDatasetMeta(0);
+    const metaMob = chartInstance.getDatasetMeta(1);
+    const primeiroPrevisto = metaPrevisto.data[indices[0]];
+    const ultimoPrevisto = metaPrevisto.data[indices[indices.length - 1]];
+    const primeiroMob = metaMob.data[indices[0]];
+    const ultimoMob = metaMob.data[indices[indices.length - 1]];
+    if (!primeiroPrevisto || !ultimoPrevisto) return;
+
     const pad = 6;
     const leftCandidates = [primeiroPrevisto.x - (primeiroPrevisto.width || 0) / 2];
     const rightCandidates = [ultimoPrevisto.x + (ultimoPrevisto.width || 0) / 2];
@@ -737,6 +1059,128 @@ function renderChart(){
   });
 }
 
+/* ==================== GRÁFICO — EQUIPAMENTOS ==================== */
+let eqChart;
+function renderEqChart(){
+  const ctx = document.getElementById('eq-chart-efetivo').getContext('2d');
+  const labels = EQ_SLOTS.map(eqSlotLabelEixo);
+  const previstoArr = buildEqPrevistoArray();
+  const mobArr = buildEqMobArray();
+  const emMobArr = buildEqEmMobArray();
+  if (eqChart) eqChart.destroy();
+  eqChart = new Chart(ctx, {
+    plugins: [dataLabelsPlugin, eqMesVigenteHighlightPlugin],
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Previsto no Mês',
+          data: previstoArr,
+          backgroundColor: 'rgba(46,134,171,0.35)',
+          borderColor: '#2e86ab',
+          borderWidth: 1,
+          borderRadius: 4,
+          barPercentage: 0.95,
+          categoryPercentage: 0.92,
+          stack: 'previsto',
+          order: 1
+        },
+        {
+          type: 'bar',
+          label: 'Mobilizados',
+          data: mobArr,
+          backgroundColor: 'rgba(45,158,107,0.75)',
+          borderColor: '#2d9e6b',
+          borderWidth: 1,
+          barPercentage: 0.95,
+          categoryPercentage: 0.92,
+          stack: 'realizado',
+          order: 2
+        },
+        {
+          type: 'bar',
+          label: 'Em Mobilização',
+          data: emMobArr,
+          backgroundColor: 'rgba(244,208,63,0.75)',
+          borderColor: '#c9a227',
+          borderWidth: 1,
+          borderRadius: 4,
+          barPercentage: 0.95,
+          categoryPercentage: 0.92,
+          stack: 'realizado',
+          order: 2
+        },
+        {
+          type: 'line',
+          label: 'Pico de Referência',
+          data: EQ_SLOTS.map(()=>EQ_PICO_TEORICO),
+          borderColor: '#f4a261',
+          borderWidth: 1.5,
+          borderDash: [6,4],
+          pointRadius: 0,
+          order: 3
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 22 } },
+      interaction: {mode:'index', intersect:false},
+      onClick: (evt, _elements, chartInstance) => {
+        const pts = chartInstance.getElementsAtEventForMode(evt, 'nearest', {intersect:true}, true);
+        if (!pts.length || pts[0].datasetIndex !== 0) return;
+        abrirEdicaoPrevistoEq(EQ_SLOTS[pts[0].index]);
+      },
+      onHover: (evt, _elements, chartInstance) => {
+        const pts = chartInstance.getElementsAtEventForMode(evt, 'nearest', {intersect:true}, true);
+        const editavel = pts.length && pts[0].datasetIndex === 0 && EQ_SLOTS[pts[0].index].kind === 'week';
+        evt.native.target.style.cursor = editavel ? 'pointer' : 'default';
+      },
+      plugins: {
+        legend: {
+          position:'bottom',
+          labels:{
+            usePointStyle:false,
+            boxWidth: 18,
+            boxHeight: 12,
+            padding: 20,
+            font:{family:'Inter', size:15, weight:'700'}
+          }
+        },
+        tooltip: {
+          titleFont:{family:'Inter', size:15, weight:'700'},
+          bodyFont:{family:'Inter', size:14, weight:'600'},
+          footerFont:{family:'Inter', size:14, weight:'700'},
+          callbacks: {
+            title: (items) => eqSlotLabelCompleto(EQ_SLOTS[items[0].dataIndex]),
+            label: (c) => `${c.dataset.label}: ${c.raw !== null && c.raw !== undefined ? fmtNum(c.raw)+' equipamentos' : 'sem dado'}`,
+            footer: (items) => {
+              const hasRealizado = items.some(it => it.datasetIndex === 1 || it.datasetIndex === 2);
+              if (!hasRealizado) return '';
+              const total = getEqSlotTotal(EQ_SLOTS[items[0].dataIndex]);
+              return total !== null ? `Total Realizado: ${fmtNum(total)} equipamentos` : '';
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero:true,
+          title:{display:true, text:'Nº de equipamentos', font:{family:'Inter', size:17, weight:'800'}},
+          ticks:{font:{family:'Inter', size:16, weight:'800'}}
+        },
+        x: {
+          stacked:false,
+          title:{display:true, text: EQ_MES_VIGENTE_IDX >= 0 ? `Mês do contrato (${EQ_MESES_LABELS[EQ_MES_VIGENTE_IDX]} aberto por semana)` : 'Mês do contrato', font:{family:'Inter', size:17, weight:'800'}},
+          ticks:{font:{family:'Inter', size:15, weight:'800'}}
+        }
+      }
+    }
+  });
+}
+
 /* ==================== KPIs ==================== */
 function renderKPIs(){
   document.getElementById('kpi-pico-teorico').textContent = fmtNum(PICO_TEORICO) + ' pessoas';
@@ -767,6 +1211,40 @@ function renderKPIs(){
     const desvioEl = document.getElementById('kpi-desvio');
     desvioEl.textContent = (desvio>=0?'+':'') + fmtNum(desvio) + ' pessoas';
     document.getElementById('kpi-desvio-pct').textContent = (pct>=0?'+':'') + fmtPct(pct) + '% vs. previsto';
+    desvioCard.classList.remove('danger','success');
+    desvioCard.classList.add(Math.abs(pct) <= 5 ? 'success' : (desvio < 0 ? 'danger' : 'accent'));
+  }
+}
+
+/* ==================== KPIs — EQUIPAMENTOS ==================== */
+function renderEqKPIs(){
+  document.getElementById('eq-kpi-pico-teorico').textContent = fmtNum(EQ_PICO_TEORICO) + ' equipamentos';
+
+  let maxVal = -1, maxIdx = 0;
+  EQ_MESES_LABELS.forEach((_,i)=>{ const v = getEqMonthPrevisto(i); if (v > maxVal){ maxVal = v; maxIdx = i; } });
+  document.getElementById('eq-kpi-pico-mes').textContent = fmtNum(maxVal) + ' equipamentos';
+  document.getElementById('eq-kpi-pico-mes-quando').textContent = 'Previsto para ' + EQ_MESES_LABELS[maxIdx];
+
+  let ultimoSlot = null;
+  EQ_SLOTS.forEach((s) => { if (getEqSlotEntry(s) !== null){ ultimoSlot = s; } });
+  if (!ultimoSlot){
+    document.getElementById('eq-kpi-realizado-atual').textContent = 'Sem lançamento';
+    document.getElementById('eq-kpi-realizado-mes').textContent = 'Use "Lançar Equipamentos Realizado"';
+    document.getElementById('eq-kpi-desvio').textContent = '–';
+    document.getElementById('eq-kpi-desvio-pct').textContent = '–';
+  } else {
+    const mob = getEqSlotMob(ultimoSlot) || 0;
+    const emMob = getEqSlotEmMob(ultimoSlot) || 0;
+    const valRealizado = mob + emMob;
+    const valPrevisto = getEqSlotPrevisto(ultimoSlot);
+    document.getElementById('eq-kpi-realizado-atual').textContent = fmtNum(valRealizado) + ' equipamentos';
+    document.getElementById('eq-kpi-realizado-mes').textContent = `Referência: ${eqSlotLabelCompleto(ultimoSlot)} (${fmtNum(mob)} mobilizados + ${fmtNum(emMob)} em mobilização)`;
+    const desvio = valRealizado - valPrevisto;
+    const pct = valPrevisto ? (desvio/valPrevisto*100) : 0;
+    const desvioCard = document.getElementById('eq-kpi-desvio-card');
+    const desvioEl = document.getElementById('eq-kpi-desvio');
+    desvioEl.textContent = (desvio>=0?'+':'') + fmtNum(desvio) + ' equipamentos';
+    document.getElementById('eq-kpi-desvio-pct').textContent = (pct>=0?'+':'') + fmtPct(pct) + '% vs. previsto';
     desvioCard.classList.remove('danger','success');
     desvioCard.classList.add(Math.abs(pct) <= 5 ? 'success' : (desvio < 0 ? 'danger' : 'accent'));
   }
@@ -816,6 +1294,36 @@ function renderTabelaLancamentos(){
   }).join('');
 }
 
+/* ==================== TABELA LANÇAMENTOS — EQUIPAMENTOS ==================== */
+function renderEqTabelaLancamentos(){
+  const tbody = document.getElementById('eq-tbody-lancamentos');
+  const comDado = EQ_SLOTS.filter(s => getEqSlotEntry(s) !== null);
+  if (comDado.length === 0){
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:20px;">Nenhum lançamento realizado ainda.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = comDado.map(s => {
+    const prev = getEqSlotPrevisto(s);
+    const mob = getEqSlotMob(s) || 0;
+    const emMob = getEqSlotEmMob(s) || 0;
+    const real = mob + emMob;
+    const desvio = real - prev;
+    const pct = prev ? (desvio/prev*100) : 0;
+    let badge = 'badge-success', txt = 'No previsto';
+    if (Math.abs(pct) > 10) { badge = 'badge-danger'; txt = 'Crítico'; }
+    else if (Math.abs(pct) > 5) { badge = 'badge-warning'; txt = 'Atenção'; }
+    return `<tr>
+      <td>${eqSlotLabelCompleto(s)}</td>
+      <td class="num">${fmtNum(prev)}</td>
+      <td class="num">${fmtNum(mob)}</td>
+      <td class="num">${fmtNum(emMob)}</td>
+      <td class="num">${fmtNum(real)}</td>
+      <td class="num">${(desvio>=0?'+':'')+fmtNum(desvio)} (${(pct>=0?'+':'')+fmtPct(pct)}%)</td>
+      <td><span class="badge ${badge}">${txt}</span></td>
+    </tr>`;
+  }).join('');
+}
+
 function renderTextosDinamicos(){
   const chartSub = document.getElementById('chart-card-sub');
   const lancSub = document.getElementById('lancamentos-card-sub');
@@ -825,6 +1333,19 @@ function renderTextosDinamicos(){
     lancSub.textContent = `Histórico de apontamentos — semanal no mês vigente (${MESES_LABELS[MES_VIGENTE_IDX]}), mensal nos demais meses`;
   } else {
     chartSub.textContent = `Barra azul = Previsto (planejamento contratual) · Barra empilhada (verde + amarela) = Realizado, com Mobilizados e Em Mobilização · Período: ${periodoTxt} (${MESES_LABELS.length} meses)`;
+    lancSub.textContent = 'Histórico de apontamentos mensais informados manualmente';
+  }
+}
+
+function renderTextosDinamicosEq(){
+  const chartSub = document.getElementById('eq-chart-card-sub');
+  const lancSub = document.getElementById('eq-lancamentos-card-sub');
+  const periodoTxt = `Mês 01 a Mês ${String(EQ_MESES_LABELS.length).padStart(2,'0')}`;
+  if (EQ_MES_VIGENTE_IDX >= 0){
+    chartSub.textContent = `Barra azul = Previsto (clique numa semana do mês vigente para editar) · Barra empilhada (verde + amarela) = Realizado, com Mobilizados e Em Mobilização · Mês vigente (${EQ_MESES_LABELS[EQ_MES_VIGENTE_IDX]}) aberto em semanas de 7 dias — os demais meses ficam fechados (1 barra/mês) · Período: ${periodoTxt}`;
+    lancSub.textContent = `Histórico de apontamentos — semanal no mês vigente (${EQ_MESES_LABELS[EQ_MES_VIGENTE_IDX]}), mensal nos demais meses`;
+  } else {
+    chartSub.textContent = `Barra azul = Previsto · Barra empilhada (verde + amarela) = Realizado, com Mobilizados e Em Mobilização · Período: ${periodoTxt} (${EQ_MESES_LABELS.length} meses — a curva de equipamentos já encerrou dentro do período selecionado)`;
     lancSub.textContent = 'Histórico de apontamentos mensais informados manualmente';
   }
 }
@@ -839,6 +1360,14 @@ function renderTudo(){
   renderTabelaFuncoes();
   renderTabelaLancamentos();
   if (typeof popularSelectMesVigente === 'function') popularSelectMesVigente();
+
+  EQ_MES_VIGENTE_IDX = calcularEqMesVigenteIdx();
+  finalizarEqMesesFechados();
+  EQ_SLOTS = construirEqSlots();
+  renderTextosDinamicosEq();
+  renderEqChart();
+  renderEqKPIs();
+  renderEqTabelaLancamentos();
 }
 
 /* ==================== MODAL LANÇAR ==================== */
@@ -850,11 +1379,16 @@ function popularSelectMes(){
 }
 popularSelectMes();
 
+const btnZerarLancamento = document.getElementById('btn-zerar-lancamento');
 function preencherModalComSlotSelecionado(){
   const s = SLOTS[Number(selectMes.value)];
   const atual = getSlotEntry(s);
   document.getElementById('input-mob').value = atual ? (atual.mob ?? '') : '';
   document.getElementById('input-em-mob').value = atual ? (atual.emMob ?? '') : '';
+  // "Zerar" só faz sentido se já existir um lançamento direto nesse slot exato (semana ou
+  // mês fechado). Para um mês fechado que só tem valor por herança da última semana (sem
+  // chave "m:<índice>" própria), zerar deve limpar essa última semana lançada, não "nada".
+  btnZerarLancamento.style.display = atual ? '' : 'none';
 }
 selectMes.addEventListener('change', preencherModalComSlotSelecionado);
 
@@ -871,10 +1405,87 @@ document.getElementById('btn-salvar').addEventListener('click', ()=>{
   const mob = mobRaw === '' ? 0 : parseFloat(mobRaw);
   const emMob = emMobRaw === '' ? 0 : parseFloat(emMobRaw);
   if (isNaN(mob) || mob < 0 || isNaN(emMob) || emMob < 0){ alert('Informe valores válidos de efetivo.'); return; }
-  if (mob === 0 && emMob === 0){ alert('Informe pelo menos um valor (Mobilizado ou Em Mobilização) maior que zero.'); return; }
+  if (mob === 0 && emMob === 0){ alert('Para zerar um lançamento já existente, use o botão "Zerar lançamento". Para um novo lançamento, informe pelo menos um valor (Mobilizado ou Em Mobilização) maior que zero.'); return; }
   realizado[slotKey(s)] = { mob, emMob };
   salvarRealizado();
   modal.classList.remove('open');
+  renderTudo();
+});
+// Zera (remove) o lançamento de Realizado do slot selecionado. Se o slot for um mês fechado
+// cujo valor vem só por herança (fallback dinâmico do getSlotEntry) da última semana lançada
+// nele — sem chave "m:" própria (lançada manualmente para esse mês já fechado) — remove essa
+// última semana, que é a origem real do dado exibido.
+btnZerarLancamento.addEventListener('click', ()=>{
+  const s = SLOTS[Number(selectMes.value)];
+  if (!confirm(`Isso vai apagar o efetivo lançado para "${slotLabelCompleto(s)}". Confirma?`)) return;
+  const chaveDireta = slotKey(s);
+  if (realizado[chaveDireta]){
+    delete realizado[chaveDireta];
+  } else if (s.kind === 'month'){
+    const semanas = semanasDoMes(s.monthIdx);
+    for (let n = semanas.length; n >= 1; n--){
+      const chaveSemana = `w:${s.monthIdx}:${n}`;
+      if (realizado[chaveSemana]){ delete realizado[chaveSemana]; break; }
+    }
+  }
+  salvarRealizado();
+  preencherModalComSlotSelecionado();
+  renderTudo();
+});
+
+/* ==================== MODAL LANÇAR — EQUIPAMENTOS ==================== */
+const eqModal = document.getElementById('eq-modal-lancar');
+const eqSelectMes = document.getElementById('eq-input-mes');
+
+function popularEqSelectMes(){
+  eqSelectMes.innerHTML = EQ_SLOTS.map((s, i) => `<option value="${i}">${eqSlotLabelCompleto(s)}</option>`).join('');
+}
+popularEqSelectMes();
+
+const eqBtnZerarLancamento = document.getElementById('eq-btn-zerar-lancamento');
+function preencherEqModalComSlotSelecionado(){
+  const s = EQ_SLOTS[Number(eqSelectMes.value)];
+  const atual = getEqSlotEntry(s);
+  document.getElementById('eq-input-mob').value = atual ? (atual.mob ?? '') : '';
+  document.getElementById('eq-input-em-mob').value = atual ? (atual.emMob ?? '') : '';
+  eqBtnZerarLancamento.style.display = atual ? '' : 'none';
+}
+eqSelectMes.addEventListener('change', preencherEqModalComSlotSelecionado);
+
+document.getElementById('eq-btn-lancar').addEventListener('click', ()=>{
+  popularEqSelectMes();
+  eqModal.classList.add('open');
+  preencherEqModalComSlotSelecionado();
+});
+document.getElementById('eq-btn-cancelar').addEventListener('click', ()=> eqModal.classList.remove('open'));
+document.getElementById('eq-btn-salvar').addEventListener('click', ()=>{
+  const s = EQ_SLOTS[Number(eqSelectMes.value)];
+  const mobRaw = document.getElementById('eq-input-mob').value;
+  const emMobRaw = document.getElementById('eq-input-em-mob').value;
+  const mob = mobRaw === '' ? 0 : parseFloat(mobRaw);
+  const emMob = emMobRaw === '' ? 0 : parseFloat(emMobRaw);
+  if (isNaN(mob) || mob < 0 || isNaN(emMob) || emMob < 0){ alert('Informe valores válidos de equipamentos.'); return; }
+  if (mob === 0 && emMob === 0){ alert('Para zerar um lançamento já existente, use o botão "Zerar lançamento". Para um novo lançamento, informe pelo menos um valor (Mobilizado ou Em Mobilização) maior que zero.'); return; }
+  eqRealizado[slotKey(s)] = { mob, emMob };
+  salvarEqRealizado();
+  eqModal.classList.remove('open');
+  renderTudo();
+});
+eqBtnZerarLancamento.addEventListener('click', ()=>{
+  const s = EQ_SLOTS[Number(eqSelectMes.value)];
+  if (!confirm(`Isso vai apagar os equipamentos lançados para "${eqSlotLabelCompleto(s)}". Confirma?`)) return;
+  const chaveDireta = slotKey(s);
+  if (eqRealizado[chaveDireta]){
+    delete eqRealizado[chaveDireta];
+  } else if (s.kind === 'month'){
+    const semanas = eqSemanasDoMes(s.monthIdx);
+    for (let n = semanas.length; n >= 1; n--){
+      const chaveSemana = `w:${s.monthIdx}:${n}`;
+      if (eqRealizado[chaveSemana]){ delete eqRealizado[chaveSemana]; break; }
+    }
+  }
+  salvarEqRealizado();
+  preencherEqModalComSlotSelecionado();
   renderTudo();
 });
 
@@ -904,6 +1515,32 @@ document.getElementById('btn-previsto-salvar').addEventListener('click', ()=>{
   renderTudo();
 });
 
+/* ==================== MODAL EDITAR PREVISTO — EQUIPAMENTOS ==================== */
+const eqModalPrevisto = document.getElementById('eq-modal-previsto');
+function abrirEdicaoPrevistoEq(slot){
+  if (slot.kind !== 'week'){
+    alert('O Previsto só pode ser editado por semana. Selecione este mês em "Mês vigente" para abri-lo em semanas.');
+    return;
+  }
+  document.getElementById('eq-previsto-slot-label').textContent = eqSlotLabelCompleto(slot);
+  document.getElementById('eq-input-previsto-semana').value = getEqSlotPrevisto(slot);
+  eqModalPrevisto.dataset.monthIdx = slot.monthIdx;
+  eqModalPrevisto.dataset.semana = slot.semana.n;
+  eqModalPrevisto.classList.add('open');
+}
+document.getElementById('eq-btn-previsto-cancelar').addEventListener('click', ()=> eqModalPrevisto.classList.remove('open'));
+document.getElementById('eq-btn-previsto-salvar').addEventListener('click', ()=>{
+  const raw = document.getElementById('eq-input-previsto-semana').value;
+  const val = raw === '' ? NaN : parseFloat(raw);
+  if (isNaN(val) || val < 0){ alert('Informe um valor válido de quantidade de equipamentos.'); return; }
+  const monthIdx = Number(eqModalPrevisto.dataset.monthIdx);
+  const n = Number(eqModalPrevisto.dataset.semana);
+  eqPrevistoSemanal[`w:${monthIdx}:${n}`] = val;
+  salvarEqPrevistoSemanal();
+  eqModalPrevisto.classList.remove('open');
+  renderTudo();
+});
+
 /* ==================== RESET PREVISTO ==================== */
 document.getElementById('btn-reset-previsto').addEventListener('click', ()=>{
   if (confirm('Isso vai apagar todas as edições de Previsto por semana e por mês, voltando ao Previsto contratual original. Confirma?')){
@@ -923,6 +1560,44 @@ document.getElementById('btn-reset').addEventListener('click', ()=>{
     renderTudo();
   }
 });
+
+/* ==================== RESET PREVISTO / RESET — EQUIPAMENTOS ==================== */
+document.getElementById('eq-btn-reset-previsto').addEventListener('click', ()=>{
+  if (confirm('Isso vai apagar todas as edições de Previsto de equipamentos por semana e por mês, voltando à curva original. Confirma?')){
+    eqPrevistoSemanal = {};
+    eqPrevistoMensalOverride = {};
+    salvarEqPrevistoSemanal();
+    salvarEqPrevistoMensalOverride();
+    renderTudo();
+  }
+});
+document.getElementById('eq-btn-reset').addEventListener('click', ()=>{
+  if (confirm('Isso vai apagar todos os lançamentos de Equipamentos Realizado. Confirma?')){
+    eqRealizado = {};
+    salvarEqRealizado();
+    renderTudo();
+  }
+});
+
+/* ==================== EXPORT PNG — EQUIPAMENTOS ==================== */
+document.getElementById('eq-btn-export-png').addEventListener('click', ()=>{
+  const url = eqChart.toBase64Image('image/png', 1);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'curva_equipamentos.png';
+  a.click();
+});
+
+/* ==================== ABAS (Mão de Obra / Equipamentos) ==================== */
+const tabButtons = document.querySelectorAll('.tab-btn');
+const tabPanels = { 'mao-de-obra': document.getElementById('tab-mao-obra'), 'equipamentos': document.getElementById('tab-equipamentos') };
+function ativarTab(nome){
+  tabButtons.forEach(b => b.classList.toggle('active', b.dataset.tab === nome));
+  Object.entries(tabPanels).forEach(([k, el]) => { el.hidden = (k !== nome); });
+  if (nome === 'mao-de-obra' && chart) chart.resize();
+  if (nome === 'equipamentos' && eqChart) eqChart.resize();
+}
+tabButtons.forEach(b => b.addEventListener('click', () => ativarTab(b.dataset.tab)));
 
 /* ==================== SELETOR "MÊS VIGENTE" (simular/travar o mês aberto por semana) ==================== */
 const selectMesVigente = document.getElementById('select-mes-vigente');
@@ -960,7 +1635,7 @@ function aplicarPeriodoObra(){
   const vIni = inputObraInicio.value; // "YYYY-MM-DD"
   const vFim = inputObraTermino.value;
   if (!vIni || !vFim) return;
-  const [iAno, iMes] = vIni.split('-').map(Number);
+  const [iAno, iMes, iDia] = vIni.split('-').map(Number);
   const [tAno, tMes] = vFim.split('-').map(Number);
   const numMesesCalc = calcularNumMesesEntreDatas(iAno, iMes, tAno, tMes);
 
@@ -979,8 +1654,20 @@ function aplicarPeriodoObra(){
 
   CONTRATO_ANO_INICIO = iAno;
   CONTRATO_MES_INICIO = iMes;
+  CONTRATO_DIA_INICIO = iDia;
   MESES_LABELS = Array.from({length: numMeses}, (_, i) => `Mês ${String(i + 1).padStart(2, '0')}`);
   TOTAL_PREVISTO = TOTAL_PREVISTO_BASE.slice(0, numMeses);
+
+  // Equipamentos — mesma data de início/término (mesma obra), comprimento próprio (22 meses de dados).
+  const eqAvisoPeriodo = document.getElementById('eq-aviso-periodo');
+  eqAvisoPeriodo.style.display = 'none';
+  const eqNumMeses = Math.min(numMesesCalc, EQ_N_MESES_DADOS_REAIS);
+  EQ_MESES_LABELS = Array.from({length: eqNumMeses}, (_, i) => `Mês ${String(i + 1).padStart(2, '0')}`);
+  EQ_TOTAL_PREVISTO = EQ_TOTAL_PREVISTO_BASE.slice(0, eqNumMeses);
+  if (numMesesCalc > EQ_N_MESES_DADOS_REAIS){
+    eqAvisoPeriodo.textContent = `Atenção: o período informado tem ${numMesesCalc} meses, mas só há dados de equipamentos para ${EQ_N_MESES_DADOS_REAIS} meses. Exibindo apenas Mês 01 a Mês ${EQ_N_MESES_DADOS_REAIS}.`;
+    eqAvisoPeriodo.style.display = 'block';
+  }
 
   localStorage.setItem(OBRA_INICIO_KEY, vIni);
   localStorage.setItem(OBRA_TERMINO_KEY, vFim);
@@ -1006,7 +1693,11 @@ document.getElementById('btn-aplicar-periodo').addEventListener('click', aplicar
 
 /* ==================== EXPORT / IMPORT JSON ==================== */
 document.getElementById('btn-export-json').addEventListener('click', ()=>{
-  const payload = { versao:'1.2', exportado_em: new Date().toISOString(), realizado, previstoSemanal, previstoMensalOverride };
+  const payload = {
+    versao:'2.0', exportado_em: new Date().toISOString(),
+    realizado, previstoSemanal, previstoMensalOverride,
+    eqRealizado, eqPrevistoSemanal, eqPrevistoMensalOverride
+  };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1023,9 +1714,15 @@ document.getElementById('import-input').addEventListener('change', (e)=>{
       realizado = data.realizado || {};
       previstoSemanal = data.previstoSemanal || {};
       previstoMensalOverride = data.previstoMensalOverride || {};
+      eqRealizado = data.eqRealizado || {};
+      eqPrevistoSemanal = data.eqPrevistoSemanal || {};
+      eqPrevistoMensalOverride = data.eqPrevistoMensalOverride || {};
       salvarRealizado();
       salvarPrevistoSemanal();
       salvarPrevistoMensalOverride();
+      salvarEqRealizado();
+      salvarEqPrevistoSemanal();
+      salvarEqPrevistoMensalOverride();
       renderTudo();
       alert('Dados importados com sucesso.');
     }catch(err){ alert('Arquivo inválido.'); }
@@ -1051,6 +1748,9 @@ window.getEstadoParaNuvem = function(){
     realizado,
     previstoSemanal,
     previstoMensalOverride,
+    eqRealizado,
+    eqPrevistoSemanal,
+    eqPrevistoMensalOverride,
     obraDataInicio: inputObraInicio.value,
     obraDataTermino: inputObraTermino.value
   };
@@ -1059,9 +1759,15 @@ window.aplicarEstadoDaNuvem = function(dados){
   realizado = dados.realizado || {};
   previstoSemanal = dados.previstoSemanal || {};
   previstoMensalOverride = dados.previstoMensalOverride || {};
+  eqRealizado = dados.eqRealizado || {};
+  eqPrevistoSemanal = dados.eqPrevistoSemanal || {};
+  eqPrevistoMensalOverride = dados.eqPrevistoMensalOverride || {};
   salvarRealizado();
   salvarPrevistoSemanal();
   salvarPrevistoMensalOverride();
+  salvarEqRealizado();
+  salvarEqPrevistoSemanal();
+  salvarEqPrevistoMensalOverride();
   if (dados.obraDataInicio && dados.obraDataTermino){
     inputObraInicio.value = dados.obraDataInicio;
     inputObraTermino.value = dados.obraDataTermino;
@@ -1079,7 +1785,7 @@ renderTudo();
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-analytics.js";
   import {
-    getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp
+    getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, updateDoc
   } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -1105,6 +1811,27 @@ renderTudo();
   const nuvemStatus = document.getElementById('nuvem-status');
   const listaVersoes = document.getElementById('lista-versoes-nuvem');
 
+  // Versão atualmente carregada da nuvem (se houver) — permite "Atualizar" (sobrescrever)
+  // em vez de sempre criar uma versão nova. Fica em memória (não persiste entre sessões):
+  // a cada carregamento de página, é preciso "Carregar da Nuvem" de novo antes de "Atualizar".
+  let docIdAtual = null;
+  let nomeVersaoAtual = null;
+  const btnAtualizar = document.getElementById('btn-nuvem-atualizar');
+  const labelVersaoAtual = document.getElementById('nuvem-versao-atual-label');
+  const nomeVersaoAtualEl = document.getElementById('nuvem-versao-atual-nome');
+  function setVersaoAtual(id, nome){
+    docIdAtual = id;
+    nomeVersaoAtual = nome;
+    if (id){
+      btnAtualizar.style.display = '';
+      labelVersaoAtual.style.display = 'inline-flex';
+      nomeVersaoAtualEl.textContent = nome || '(sem nome)';
+    } else {
+      btnAtualizar.style.display = 'none';
+      labelVersaoAtual.style.display = 'none';
+    }
+  }
+
   /* ---- Salvar nova versão ---- */
   document.getElementById('btn-nuvem-salvar').addEventListener('click', () => {
     inputNomeVersao.value = '';
@@ -1121,11 +1848,12 @@ renderTudo();
     btnSalvarConfirmar.textContent = 'Salvando…';
     try {
       const estado = window.getEstadoParaNuvem();
-      await addDoc(collection(db, NOME_COLECAO), {
+      const novoDoc = await addDoc(collection(db, NOME_COLECAO), {
         nome,
         criadoEm: serverTimestamp(),
         dadosJson: JSON.stringify(estado)
       });
+      setVersaoAtual(novoDoc.id, nome);
       modalSalvar.classList.remove('open');
       alert('Versão "' + nome + '" salva na nuvem com sucesso.');
     } catch (err) {
@@ -1164,6 +1892,7 @@ renderTudo();
           try {
             const dados = JSON.parse(d.dadosJson);
             window.aplicarEstadoDaNuvem(dados);
+            setVersaoAtual(docSnap.id, d.nome || '(sem nome)');
             modalCarregar.classList.remove('open');
           } catch (err) {
             alert('Não foi possível ler os dados dessa versão.');
@@ -1179,6 +1908,29 @@ renderTudo();
   });
   document.getElementById('btn-nuvem-carregar-fechar').addEventListener('click', () => {
     modalCarregar.classList.remove('open');
+  });
+
+  /* ---- Atualizar (sobrescrever) a versão atualmente carregada ---- */
+  btnAtualizar.addEventListener('click', async () => {
+    if (!docIdAtual) return;
+    if (!confirm('Isso vai sobrescrever a versão "' + (nomeVersaoAtual || '(sem nome)') + '" salva na nuvem com os dados atuais desta tela. Confirma?')) return;
+    btnAtualizar.disabled = true;
+    const textoOriginal = btnAtualizar.textContent;
+    btnAtualizar.textContent = 'Atualizando…';
+    try {
+      const estado = window.getEstadoParaNuvem();
+      await updateDoc(doc(db, NOME_COLECAO, docIdAtual), {
+        atualizadoEm: serverTimestamp(),
+        dadosJson: JSON.stringify(estado)
+      });
+      alert('Versão "' + (nomeVersaoAtual || '(sem nome)') + '" atualizada na nuvem com sucesso.');
+    } catch (err) {
+      console.error(err);
+      alert('Não foi possível atualizar a versão na nuvem: ' + err.message);
+    } finally {
+      btnAtualizar.disabled = false;
+      btnAtualizar.textContent = textoOriginal;
+    }
   });
 </script>
 
