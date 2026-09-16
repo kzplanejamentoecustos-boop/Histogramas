@@ -56,6 +56,7 @@
   .toolbar{background:var(--bg-card); border-radius:10px; box-shadow:var(--shadow); padding:16px 20px; margin-bottom:24px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;}
   .toolbar .grow{flex:1;}
   button{font-family:'Inter',sans-serif; font-size:13px; font-weight:600; border:none; border-radius:6px; padding:10px 16px; cursor:pointer; transition:.15s;}
+  button:disabled{opacity:.45; cursor:not-allowed;}
   .btn-primary{background:var(--primary); color:#fff;}
   .btn-primary:hover{background:#12233c;}
   .btn-secondary{background:var(--bg-light); color:var(--primary); border:1px solid var(--border);}
@@ -163,13 +164,18 @@
     <input type="file" id="import-input" accept="application/json">
     <button class="btn-accent" id="btn-nuvem-carregar">☁️ Carregar da Nuvem</button>
     <button class="btn-accent" id="btn-nuvem-salvar">☁️ Salvar Nova Versão</button>
-    <button class="btn-primary" id="btn-nuvem-atualizar" style="display:none;" title="Sobrescreve a versão atualmente carregada com os dados de agora">💾 Atualizar Versão Salva</button>
+    <button class="btn-primary" id="btn-nuvem-atualizar" disabled title="Carregue ou salve uma versão primeiro para poder atualizá-la">💾 Salvar Atualização</button>
     <span id="nuvem-versao-atual-label" style="display:none; font-size:13px; font-weight:600; color:var(--text-muted); align-items:center;">Versão carregada: <strong id="nuvem-versao-atual-nome" style="margin-left:4px;"></strong></span>
     <label style="font-size:13px; font-weight:600; color:var(--text-muted); display:flex; align-items:center; gap:8px; margin-left:8px;">
       Mês vigente:
       <select id="select-mes-vigente" style="padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:13px;"></select>
     </label>
     <div class="grow"></div>
+  </div>
+
+  <div id="aviso-sem-dados" style="font-size:13px; font-weight:600; color:#b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:10px 14px; margin:-8px 0 20px; display:flex; align-items:center; gap:10px; justify-content:space-between; flex-wrap:wrap;">
+    <span>⚠️ Nenhum dado carregado ainda nesta sessão — os gráficos começam em branco (sem Previsto nem Realizado) para não parecer que a tela já está atualizada. Clique em "☁️ Carregar da Nuvem" para trazer a versão mais recente.</span>
+    <button class="btn-primary" id="btn-aviso-sem-dados-carregar" type="button" style="white-space:nowrap;">☁️ Carregar da Nuvem</button>
   </div>
 
   <div class="tab-nav">
@@ -196,7 +202,7 @@
 
     <div class="card">
       <h2>Detalhamento por Função — Efetivo Previsto (Pico)</h2>
-      <div class="card-sub">81 funções cadastradas no histograma contratual · Ordenado por pico decrescente</div>
+      <div class="card-sub" id="funcoes-card-sub">Carregando…</div>
       <div class="table-scroll">
         <table class="pcc-table">
           <thead>
@@ -383,11 +389,24 @@
 
 <script>
 /* ==================== DADOS (extraídos de WSTSAF3000PL5HO001.xlsx — Histograma Mão de Obra) ==================== */
-const FUNCOES = [
+const FUNCOES_PADRAO = [
 {"item": 1, "funcao": "GERENTE DE CONTRATO", "pico": 1.0, "meses": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}, {"item": 2, "funcao": "GERENTE DE ENGENHARIA", "pico": 1.0, "meses": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}, {"item": 3, "funcao": "GERENTE DE PRODUÇÃO", "pico": 1.0, "meses": [0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}, {"item": 4, "funcao": "ENGENHEIRO DE PRODUÇÃO", "pico": 3.0, "meses": [0, 0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 2.0, 2.0, 2.0]}, {"item": 5, "funcao": "ENGENHEIRO ASSISTENTE", "pico": 3.0, "meses": [0, 0, 1.0, 1.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 2.0, 1.0, 1.0, 1.0]}, {"item": 6, "funcao": "ENGENHEIRO ELETRICISTA", "pico": 1.0, "meses": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}, {"item": 7, "funcao": "ASSISTENTE TÉCNICO DE ENGENHARIA", "pico": 2.0, "meses": [0, 0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0]}, {"item": 8, "funcao": "COORDENADOR DE PROJETOS", "pico": 1.0, "meses": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0, 0, 0]}, {"item": 9, "funcao": "ENGENHEIRO DE PRODUÇÃO NOTURNO", "pico": 1.0, "meses": [0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0, 0, 0, 0, 0, 0]}, {"item": 10, "funcao": "ENGENHEIRO DE PLANEJAMENTO", "pico": 1.0, "meses": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}, {"item": 11, "funcao": "TÉCNICO DE PLANEJAMENTO", "pico": 2.0, "meses": [0, 0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0]}, {"item": 12, "funcao": "AUXILIAR DE PLANEJAMENTO", "pico": 2.0, "meses": [0, 0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0]}, {"item": 13, "funcao": "ENCARREGADO DE CALDEIRARIA", "pico": 1.0, "meses": [0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0, 0, 0, 0, 0]}, {"item": 14, "funcao": "ENCARREGADO DE SOLDA", "pico": 2.0, "meses": [0, 0, 0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0, 0, 0, 0, 0]}, {"item": 15, "funcao": "MESTRE DE OBRAS", "pico": 2.0, "meses": [0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0]}, {"item": 16, "funcao": "ENCARREGADO DE PEDREIRO", "pico": 1.0, "meses": [0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0, 0, 0]}, {"item": 17, "funcao": "ENCARREGADO DE CARPINTARIA", "pico": 1.0, "meses": [0, 1.0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0, 0]}, {"item": 18, "funcao": "ENCARREGADO DE ARMAÇÃO", "pico": 4.0, "meses": [0, 0, 0, 1.0, 2.0, 2.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 3.0, 3.0, 2.0, 2.0, 0, 0, 0]}, {"item": 19, "funcao": "ENCARREGADO DE TERRAPLENAGEM", "pico": 1.0, "meses": [0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0, 0, 0]}, {"item": 20, "funcao": "GERENTE ADMINISTRATIVO-FINANCEIRO", "pico": 1.0, "meses": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}, {"item": 21, "funcao": "ENCARREGADO ADMINISTRATIVO FINANCEIRO", "pico": 1.0, "meses": [0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}, {"item": 22, "funcao": "ADMINISTRATIVO DE PESSOAL", "pico": 4.0, "meses": [1.0, 1.0, 3.0, 3.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 3.0, 1.0, 1.0, 1.0]}, {"item": 23, "funcao": "ADMINISTRATIVO DE PESSOAL NOTURNO", "pico": 1.0, "meses": [0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0, 0, 0]}, {"item": 24, "funcao": "AUXILIAR ADMINISTRATIVO", "pico": 3.0, "meses": [0, 1.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 2.0, 2.0, 2.0]}, {"item": 25, "funcao": "APONTADOR", "pico": 1.0, "meses": [0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0, 0, 0]}, {"item": 26, "funcao": "APONTADOR NOTURNO", "pico": 1.0, "meses": [0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0, 0, 0]}, {"item": 27, "funcao": "ADMINISTRATIVO FINANCEIRO", "pico": 1.0, "meses": [0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}, {"item": 28, "funcao": "GERENTE DE SMS", "pico": 1.0, "meses": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}, {"item": 29, "funcao": "TÉCNICO DE SEGURANÇA DO TRABALHO", "pico": 5.0, "meses": [1.0, 1.0, 1.0, 2.0, 4.0, 4.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 4.0, 4.0, 3.0, 3.0, 1.0, 1.0, 1.0]}, {"item": 30, "funcao": "TÉCNICO DE SEGURANÇA DO TRABALHO NOTURNO", "pico": 1.0, "meses": [0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}, {"item": 31, "funcao": "SUPERVISOR AMBIENTAL", "pico": 1.0, "meses": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}, {"item": 32, "funcao": "TÉCNICO DE MEIO AMBIENTE", "pico": 2.0, "meses": [0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.0]}, {"item": 33, "funcao": "AUXILIAR DE MEIO AMBIENTE", "pico": 2.0, "meses": [0, 0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 0]}, {"item": 34, "funcao": "MÉDICO DO TRABALHO", "pico": 0.5, "meses": [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]}, {"item": 35, "funcao": "TÉCNICO DE ENFERMAGEM DO TRABALHO", "pico": 1.0, "meses": [0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}, {"item": 36, "funcao": "AUXILIAR DE ENFERMAGEM DO TRABALHO", "pico": 1.0, "meses": [0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0, 0, 0, 0, 0, 0]}, {"item": 37, "funcao": "COORDENADOR DE COMPRAS", "pico": 1.0, "meses": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}, {"item": 38, "funcao": "COMPRADOR", "pico": 2.0, "meses": [0, 0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0]}, {"item": 39, "funcao": "AUXILIAR DE COMPRAS", "pico": 2.0, "meses": [0, 0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.0, 1.0, 0]}, {"item": 40, "funcao": "ALMOXARIFE", "pico": 2.0, "meses": [0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0]}, {"item": 41, "funcao": "FERRAMENTEIRO", "pico": 3.0, "meses": [0, 0, 1.0, 1.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0]}, {"item": 42, "funcao": "AUXILIAR DE ALMOXARIFADO", "pico": 1.0, "meses": [0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0, 0, 0, 0, 0, 0]}, {"item": 43, "funcao": "MARINHEIRO NOTURNO", "pico": 2.0, "meses": [0, 0, 0, 0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 0, 0, 0, 0, 0, 0]}, {"item": 44, "funcao": "ENCARREGADO DE MONTAGEM DE ANDAIME", "pico": 1.0, "meses": [0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}, {"item": 45, "funcao": "MONTADOR DE ANDAIME", "pico": 1.0, "meses": [0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}, {"item": 46, "funcao": "COORDENADOR DE CQ", "pico": 1.0, "meses": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}, {"item": 47, "funcao": "TÉCNICO DE QUALIDADE", "pico": 1.0, "meses": [0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}, {"item": 48, "funcao": "TÉCNICO DE DOCUMENTAÇÕES", "pico": 2.0, "meses": [0, 0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0]}, {"item": 49, "funcao": "TOPÓGRAFO", "pico": 2.0, "meses": [0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0]}, {"item": 50, "funcao": "AUXILIAR DE TOPOGRAFIA", "pico": 2.0, "meses": [0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0]}, {"item": 51, "funcao": "INSPETOR DE SOLDA N1", "pico": 1.0, "meses": [0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}, {"item": 53, "funcao": "ENCARREGADO DE OPERAÇÕES", "pico": 4.0, "meses": [1.0, 0, 0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 4.0, 4.0, 3.0, 1.0, 1.0, 0, 0, 1.0]}, {"item": 54, "funcao": "OFICIAL DE MANOBRAS", "pico": 33.0, "meses": [4.0, 4.0, 5.0, 20.0, 31.0, 31.0, 33.0, 33.0, 33.0, 33.0, 33.0, 33.0, 33.0, 33.0, 33.0, 33.0, 33.0, 33.0, 22.0, 14.0, 11.0, 5.0, 5.0, 9.0]}, {"item": 56, "funcao": "OPERADOR DE GUINDASTE", "pico": 7.0, "meses": [1.0, 1.0, 1.0, 6.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 6.0, 4.0, 3.0, 1.0, 1.0, 2.0]}, {"item": 57, "funcao": "MOTORISTA CARRO LEVE DE OBRAS", "pico": 2.0, "meses": [0, 0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0]}, {"item": 58, "funcao": "AUXILIAR DE SERVIÇOS GERAIS", "pico": 3.0, "meses": [0, 0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0]}, {"item": 59, "funcao": "MECÂNICO DE MANUTENÇÃO", "pico": 2.0, "meses": [0, 0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0]}, {"item": 60, "funcao": "MECÂNICO DE MANUTENÇÃO NOTURNO", "pico": 1.0, "meses": [0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0, 0, 0, 0, 0, 0]}, {"item": 61, "funcao": "ELETRICISTA DE MANUTENÇÃO", "pico": 2.0, "meses": [0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}, {"item": 62, "funcao": "ELETRICISTA NOTURNO", "pico": 1.0, "meses": [0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0, 0, 0, 0, 0, 0]}, {"item": 63, "funcao": "AJUDANTE PRÁTICO", "pico": 125.0, "meses": [0, 14.0, 3.0, 32.0, 64.0, 64.0, 123.0, 124.0, 123.0, 123.0, 125.0, 125.0, 125.0, 124.0, 124.0, 123.0, 123.0, 106.0, 98.0, 66.0, 66.0, 4.0, 1.0, 1.0]}, {"item": 64, "funcao": "CARPINTEIRO", "pico": 14.0, "meses": [0, 6.0, 0, 0, 6.0, 6.0, 13.0, 13.0, 13.0, 13.0, 14.0, 14.0, 14.0, 14.0, 14.0, 14.0, 14.0, 14.0, 12.0, 8.0, 8.0, 1.0, 0, 0]}, {"item": 65, "funcao": "MOTORISTA OPERADOR DE MUNCK", "pico": 1.0, "meses": [0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}, {"item": 66, "funcao": "OPERADOR DE RETRO ESCAVADEIRA", "pico": 1.0, "meses": [0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]}, {"item": 67, "funcao": "MARINHEIRO", "pico": 3.0, "meses": [0, 0, 0, 0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 0, 0, 0, 0, 0, 0]}, {"item": 70, "funcao": "PEDREIRO", "pico": 13.0, "meses": [0, 4.0, 0, 0, 1.0, 1.0, 13.0, 13.0, 13.0, 13.0, 13.0, 13.0, 13.0, 13.0, 13.0, 13.0, 12.0, 12.0, 12.0, 11.0, 11.0, 0, 0, 0]}, {"item": 71, "funcao": "ARMADOR", "pico": 91.0, "meses": [0, 0, 0, 25.0, 50.0, 50.0, 88.0, 89.0, 90.0, 90.0, 91.0, 91.0, 91.0, 90.0, 90.0, 89.0, 89.0, 64.0, 63.0, 38.0, 38.0, 0, 0, 0]}, {"item": 72, "funcao": "SOLDADOR", "pico": 22.0, "meses": [0, 0, 0, 22.0, 20.0, 20.0, 18.0, 19.0, 15.0, 15.0, 15.0, 15.0, 14.0, 14.0, 14.0, 8.0, 8.0, 3.0, 2.0, 0, 0, 0, 0, 0]}, {"item": 73, "funcao": "CALDEIREIRO", "pico": 11.0, "meses": [0, 0, 0, 11.0, 9.0, 9.0, 8.0, 9.0, 5.0, 5.0, 5.0, 5.0, 4.0, 4.0, 4.0, 1.0, 1.0, 1.0, 1.0, 0, 0, 0, 0, 0]}, {"item": 74, "funcao": "MOTORISTA CARRO PESADO DE OBRAS", "pico": 6.0, "meses": [0, 3.0, 3.0, 3.0, 2.0, 2.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 6.0, 6.0, 6.0, 6.0, 5.0, 5.0, 3.0, 1.0, 0, 0]}, {"item": 75, "funcao": "OPERADOR DE MÁQUINAS", "pico": 12.0, "meses": [0, 2.0, 2.0, 11.0, 12.0, 12.0, 8.0, 8.0, 9.0, 8.0, 8.0, 8.0, 8.0, 10.0, 12.0, 12.0, 12.0, 12.0, 10.0, 6.0, 6.0, 6.0, 0, 0]}, {"item": 76, "funcao": "OPERADOR DE ESCAVADEIRA", "pico": 3.0, "meses": [0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 3.0, 3.0, 3.0, 2.0, 0, 0, 0]}, {"item": 77, "funcao": "ENCARREGADO DE OPERAÇÕES NOTURNO", "pico": 2.0, "meses": [0, 0, 0, 0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 0, 0, 0, 0, 0, 0]}, {"item": 78, "funcao": "OFICIAL DE MANOBRAS NOTURNO", "pico": 16.0, "meses": [0, 0, 0, 0, 16.0, 16.0, 16.0, 16.0, 16.0, 16.0, 16.0, 16.0, 16.0, 16.0, 16.0, 16.0, 16.0, 16.0, 0, 0, 0, 0, 0, 0]}, {"item": 79, "funcao": "OPERADOR DE GUINDASTE NOTURNO", "pico": 2.0, "meses": [0, 0, 0, 0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 0, 0, 0, 0, 0, 0]}, {"item": 80, "funcao": "CALDEIREIRO NOTURNO", "pico": 1.0, "meses": [0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0, 0, 0, 0, 0, 0]}, {"item": 81, "funcao": "SOLDADOR NOTURNO", "pico": 3.0, "meses": [0, 0, 0, 0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 0, 0, 0, 0, 0, 0]}, {"item": 82, "funcao": "OPERADOR DE MÁQUINAS NOTURNO", "pico": 6.0, "meses": [0, 0, 0, 0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 0, 0, 0, 0, 0, 0]}, {"item": 83, "funcao": "MARTELETEIRO", "pico": 2.0, "meses": [0, 0, 0, 0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 0, 0, 0, 0, 0, 0]}, {"item": 84, "funcao": "MARTELETEIRO NOTURNO", "pico": 2.0, "meses": [0, 0, 0, 0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 0, 0, 0, 0, 0, 0]}, {"item": 85, "funcao": "SUBCONTRATADO ELÉTRICA", "pico": 0, "meses": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 26.543297223598874, 60.85697121516128, 71.85968983142406, 83.29620754791429, 88.10103076293255, 90.4452319739376, 89.10175097237226, 49.580693465100204]}];
-const TOTAL_PREVISTO_BASE = [17, 56, 62, 143, 232, 233, 365, 370, 376, 385, 386, 389, 391, 379, 377, 397, 374, 320, 293, 139, 114, 106, 0, 0]; // dados reais extraídos do Excel (24 meses)
+// v15: mesmo padrão da curva de Previsto (v14) — a tabela de detalhamento por função também
+// passou a viajar pela nuvem e SEMPRE começa vazia ao abrir o arquivo (nenhuma linha/número
+// aparece até "Carregar da Nuvem"), em vez de vir sempre com os 81 registros fixos do Excel.
+let FUNCOES = [];
+// Curva de referência conhecida (extraída do Excel original) — usada só como (a) valor-padrão
+// para o botão "Restaurar Previsto Original" e (b) fallback ao carregar uma versão da nuvem
+// salva ANTES da v14 (que não guardava a curva-base). NÃO é mais usada automaticamente ao
+// abrir o arquivo — ver TOTAL_PREVISTO_BASE abaixo.
+const TOTAL_PREVISTO_BASE_PADRAO = [17, 56, 62, 143, 232, 233, 365, 370, 376, 385, 386, 389, 391, 379, 377, 397, 374, 320, 293, 139, 114, 106, 0, 0]; // dados reais extraídos do Excel (24 meses)
 const PICO_TEORICO = 397;
-const N_MESES_DADOS_REAIS = TOTAL_PREVISTO_BASE.length; // 24 — limite de dados reais disponíveis
+const N_MESES_DADOS_REAIS = TOTAL_PREVISTO_BASE_PADRAO.length; // 24 — limite de dados reais disponíveis
+// v14 (pedido do usuário): a curva de Previsto (mensal, "base") também passou a viajar pela
+// nuvem, junto com Realizado — em vez de vir sempre embutida/fixa no arquivo. Por isso ela
+// SEMPRE começa em branco (todo mês = null) ao abrir a página, exatamente como Realizado desde
+// a v13 — o gráfico fica sem nenhuma barra até "☁️ Carregar da Nuvem" trazer a curva salva.
+let TOTAL_PREVISTO_BASE = new Array(N_MESES_DADOS_REAIS).fill(null);
 // Rótulos genéricos "Mês 01", "Mês 02"... (não usam mais nome de mês/ano do calendário).
 // O comprimento é definido dinamicamente por aplicarPeriodoObra(), a partir das datas de
 // início/término informadas pelo usuário (limitado aos N_MESES_DADOS_REAIS disponíveis).
@@ -398,11 +417,13 @@ let TOTAL_PREVISTO = TOTAL_PREVISTO_BASE.slice(0, MESES_LABELS.length);
    Extraído da imagem "Quantidade Total de Equipamentos" enviada pelo usuário (curva total
    mensal, 22 meses) — NÃO há detalhamento por tipo de equipamento disponível, só o total.
    EQ_PICO_TEORICO é uma INFERÊNCIA (não um dado contratual informado): usamos o maior valor
-   da própria curva de Previsto como referência de pico, já que nenhum valor de pico teórico
-   separado foi fornecido para equipamentos. */
-const EQ_TOTAL_PREVISTO_BASE = [1, 15, 19, 53, 71, 69, 77, 78, 78, 82, 82, 82, 85, 82, 82, 80, 75, 60, 43, 27, 17, 13]; // extraído da imagem (22 meses)
-const EQ_PICO_TEORICO = Math.max(...EQ_TOTAL_PREVISTO_BASE); // inferência: maior valor da curva de Previsto (não é um dado contratual explícito)
-const EQ_N_MESES_DADOS_REAIS = EQ_TOTAL_PREVISTO_BASE.length; // 22
+   da curva de referência conhecida como referência de pico, já que nenhum valor de pico
+   teórico separado foi fornecido para equipamentos. */
+const EQ_TOTAL_PREVISTO_BASE_PADRAO = [1, 15, 19, 53, 71, 69, 77, 78, 78, 82, 82, 82, 85, 82, 82, 80, 75, 60, 43, 27, 17, 13]; // extraído da imagem (22 meses)
+const EQ_PICO_TEORICO = Math.max(...EQ_TOTAL_PREVISTO_BASE_PADRAO); // inferência: maior valor da curva de referência (não é um dado contratual explícito)
+const EQ_N_MESES_DADOS_REAIS = EQ_TOTAL_PREVISTO_BASE_PADRAO.length; // 22
+// v14: mesma lógica acima — curva de Previsto de Equipamentos também só vem da nuvem.
+let EQ_TOTAL_PREVISTO_BASE = new Array(EQ_N_MESES_DADOS_REAIS).fill(null);
 let EQ_MESES_LABELS = Array.from({length: EQ_N_MESES_DADOS_REAIS}, (_, i) => `Mês ${String(i + 1).padStart(2, '0')}`);
 let EQ_TOTAL_PREVISTO = EQ_TOTAL_PREVISTO_BASE.slice(0, EQ_MESES_LABELS.length);
 
@@ -572,7 +593,12 @@ function eqSlotLabelCompleto(slot){
 /* ==================== PREVISTO EDITÁVEL POR SEMANA (mês vigente) ==================== */
 const PREVISTO_STORAGE_KEY = 'efetivo_previsto_semanal_v1';
 // chave -> valor (nº pessoas) · só existem chaves de semana: "w:<mês>:<nºsemana>"
-let previstoSemanal = JSON.parse(localStorage.getItem(PREVISTO_STORAGE_KEY) || '{}');
+// NOTA (v13): a tela sempre ABRE VAZIA, mesmo que exista algo salvo no localStorage do
+// navegador — isso evita a impressão de que os dados exibidos estão atualizados quando na
+// verdade podem ser antigos/de outra sessão. O localStorage continua sendo GRAVADO (linha
+// abaixo) só como backup de segurança local; ele nunca é lido de volta automaticamente ao
+// abrir o arquivo. A fonte de verdade passa a ser exclusivamente a Nuvem ("Carregar da Nuvem").
+let previstoSemanal = {};
 function salvarPrevistoSemanal(){ localStorage.setItem(PREVISTO_STORAGE_KEY, JSON.stringify(previstoSemanal)); }
 
 // Previsto de uma semana específica, ou null se ainda não foi editado.
@@ -586,7 +612,8 @@ function getSemanaPrevisto(monthIdx, n){
 // (achatado), e ele é estável durante todo o período em que o mês está aberto: editar
 // uma semana não afeta o valor-base nem as demais semanas ainda não editadas.
 const PREVISTO_MENSAL_KEY = 'efetivo_previsto_mensal_override_v1';
-let previstoMensalOverride = JSON.parse(localStorage.getItem(PREVISTO_MENSAL_KEY) || '{}');
+// v13: idem acima — sempre começa vazio; localStorage é só backup de gravação, nunca lido no load.
+let previstoMensalOverride = {};
 function salvarPrevistoMensalOverride(){ localStorage.setItem(PREVISTO_MENSAL_KEY, JSON.stringify(previstoMensalOverride)); }
 function getMonthPrevisto(monthIdx){
   const v = previstoMensalOverride[monthIdx];
@@ -626,14 +653,16 @@ function finalizarMesesFechados(){
 
 /* ==================== PREVISTO EDITÁVEL POR SEMANA — EQUIPAMENTOS ==================== */
 const EQ_PREVISTO_STORAGE_KEY = 'equip_previsto_semanal_v1';
-let eqPrevistoSemanal = JSON.parse(localStorage.getItem(EQ_PREVISTO_STORAGE_KEY) || '{}');
+// v13: sempre começa vazio (ver nota em previstoSemanal, acima) — localStorage só como backup de gravação.
+let eqPrevistoSemanal = {};
 function salvarEqPrevistoSemanal(){ localStorage.setItem(EQ_PREVISTO_STORAGE_KEY, JSON.stringify(eqPrevistoSemanal)); }
 function getEqSemanaPrevisto(monthIdx, n){
   const v = eqPrevistoSemanal[`w:${monthIdx}:${n}`];
   return (v === undefined || v === null) ? null : v;
 }
 const EQ_PREVISTO_MENSAL_KEY = 'equip_previsto_mensal_override_v1';
-let eqPrevistoMensalOverride = JSON.parse(localStorage.getItem(EQ_PREVISTO_MENSAL_KEY) || '{}');
+// v13: sempre começa vazio — localStorage só como backup de gravação.
+let eqPrevistoMensalOverride = {};
 function salvarEqPrevistoMensalOverride(){ localStorage.setItem(EQ_PREVISTO_MENSAL_KEY, JSON.stringify(eqPrevistoMensalOverride)); }
 function getEqMonthPrevisto(monthIdx){
   const v = eqPrevistoMensalOverride[monthIdx];
@@ -664,16 +693,25 @@ function finalizarEqMesesFechados(){
 
 /* ==================== ESTADO / PERSISTÊNCIA — EQUIPAMENTOS ==================== */
 const EQ_STORAGE_KEY = 'equip_realizado_v1';
-let eqRealizado = JSON.parse(localStorage.getItem(EQ_STORAGE_KEY) || '{}');
+// v13: sempre começa vazio — localStorage só como backup de gravação.
+let eqRealizado = {};
 function salvarEqRealizado(){ localStorage.setItem(EQ_STORAGE_KEY, JSON.stringify(eqRealizado)); }
 
 /* ==================== ESTADO / PERSISTÊNCIA ==================== */
 const STORAGE_KEY = 'efetivo_mo_realizado_v2';
 // chave -> {mob: nº mobilizados, emMob: nº em mobilização}
 // chave de mês fechado: "m:<índice>" · chave de semana (mês vigente): "w:<índice>:<nºsemana>"
-let realizado = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+// v13 (pedido do usuário): a tela SEMPRE abre sem nenhum lançamento, mesmo que exista algo
+// salvo no localStorage deste navegador — para não passar a falsa impressão de que os dados
+// exibidos já estão atualizados. Os dados reais só entram ao clicar em "☁️ Carregar da Nuvem".
+// O localStorage continua sendo gravado (salvarRealizado) só como backup local de segurança;
+// nunca é lido de volta automaticamente ao abrir o arquivo.
+let realizado = {};
 
 // Migra lançamentos salvos no formato antigo (chave numérica pura = índice do mês) para "m:<índice>".
+// (mantido por segurança, mas como `realizado` agora sempre começa vazio, esta função não tem
+// mais o que migrar no carregamento da página — só seria relevante se algo voltasse a popular
+// `realizado` a partir do localStorage no futuro.)
 (function migrarChavesAntigas(){
   let mudou = false;
   Object.keys(realizado).forEach(k => {
@@ -992,7 +1030,7 @@ function renderChart(){
         {
           type: 'line',
           label: 'Pico Teórico (referência)',
-          data: SLOTS.map(()=>PICO_TEORICO),
+          data: TOTAL_PREVISTO_BASE.every(v => v === null) ? SLOTS.map(()=>null) : SLOTS.map(()=>PICO_TEORICO),
           borderColor: '#f4a261',
           borderWidth: 1.5,
           borderDash: [6,4],
@@ -1052,7 +1090,10 @@ function renderChart(){
         x: {
           stacked:false,
           title:{display:true, text: MES_VIGENTE_IDX >= 0 ? `Mês do contrato (${MESES_LABELS[MES_VIGENTE_IDX]} aberto por semana)` : 'Mês do contrato', font:{family:'Inter', size:17, weight:'800'}},
-          ticks:{font:{family:'Inter', size:15, weight:'800'}}
+          // autoSkip:false força o Chart.js a desenhar TODOS os rótulos de mês/semana, mesmo
+          // com muitas categorias no eixo — por pedido do usuário ("quero que apareça todas
+          // e não somente algumas"). minRotation/maxRotation garantem que caibam sem sobrepor.
+          ticks:{font:{family:'Inter', size:12, weight:'800'}, autoSkip:false, maxRotation:90}
         }
       }
     }
@@ -1114,7 +1155,7 @@ function renderEqChart(){
         {
           type: 'line',
           label: 'Pico de Referência',
-          data: EQ_SLOTS.map(()=>EQ_PICO_TEORICO),
+          data: EQ_TOTAL_PREVISTO_BASE.every(v => v === null) ? EQ_SLOTS.map(()=>null) : EQ_SLOTS.map(()=>EQ_PICO_TEORICO),
           borderColor: '#f4a261',
           borderWidth: 1.5,
           borderDash: [6,4],
@@ -1174,7 +1215,7 @@ function renderEqChart(){
         x: {
           stacked:false,
           title:{display:true, text: EQ_MES_VIGENTE_IDX >= 0 ? `Mês do contrato (${EQ_MESES_LABELS[EQ_MES_VIGENTE_IDX]} aberto por semana)` : 'Mês do contrato', font:{family:'Inter', size:17, weight:'800'}},
-          ticks:{font:{family:'Inter', size:15, weight:'800'}}
+          ticks:{font:{family:'Inter', size:12, weight:'800'}, autoSkip:false, maxRotation:90}
         }
       }
     }
@@ -1183,12 +1224,18 @@ function renderEqChart(){
 
 /* ==================== KPIs ==================== */
 function renderKPIs(){
-  document.getElementById('kpi-pico-teorico').textContent = fmtNum(PICO_TEORICO) + ' pessoas';
+  const semPrevisto = TOTAL_PREVISTO_BASE.every(v => v === null);
+  document.getElementById('kpi-pico-teorico').textContent = semPrevisto ? 'Sem dado carregado' : (fmtNum(PICO_TEORICO) + ' pessoas');
 
-  let maxVal = -1, maxIdx = 0;
-  MESES_LABELS.forEach((_,i)=>{ const v = getMonthPrevisto(i); if (v > maxVal){ maxVal = v; maxIdx = i; } });
-  document.getElementById('kpi-pico-mes').textContent = fmtNum(maxVal) + ' pessoas';
-  document.getElementById('kpi-pico-mes-quando').textContent = 'Previsto para ' + MESES_LABELS[maxIdx];
+  let maxVal = null, maxIdx = -1;
+  MESES_LABELS.forEach((_,i)=>{ const v = getMonthPrevisto(i); if (v !== null && (maxVal === null || v > maxVal)){ maxVal = v; maxIdx = i; } });
+  if (maxVal === null){
+    document.getElementById('kpi-pico-mes').textContent = 'Sem dado carregado';
+    document.getElementById('kpi-pico-mes-quando').textContent = 'Use "Carregar da Nuvem"';
+  } else {
+    document.getElementById('kpi-pico-mes').textContent = fmtNum(maxVal) + ' pessoas';
+    document.getElementById('kpi-pico-mes-quando').textContent = 'Previsto para ' + MESES_LABELS[maxIdx];
+  }
 
   // referência = último slot (semana do mês vigente, ou mês fechado) com realizado lançado
   let ultimoSlot = null, ultimoIdx = -1;
@@ -1218,12 +1265,18 @@ function renderKPIs(){
 
 /* ==================== KPIs — EQUIPAMENTOS ==================== */
 function renderEqKPIs(){
-  document.getElementById('eq-kpi-pico-teorico').textContent = fmtNum(EQ_PICO_TEORICO) + ' equipamentos';
+  const eqSemPrevisto = EQ_TOTAL_PREVISTO_BASE.every(v => v === null);
+  document.getElementById('eq-kpi-pico-teorico').textContent = eqSemPrevisto ? 'Sem dado carregado' : (fmtNum(EQ_PICO_TEORICO) + ' equipamentos');
 
-  let maxVal = -1, maxIdx = 0;
-  EQ_MESES_LABELS.forEach((_,i)=>{ const v = getEqMonthPrevisto(i); if (v > maxVal){ maxVal = v; maxIdx = i; } });
-  document.getElementById('eq-kpi-pico-mes').textContent = fmtNum(maxVal) + ' equipamentos';
-  document.getElementById('eq-kpi-pico-mes-quando').textContent = 'Previsto para ' + EQ_MESES_LABELS[maxIdx];
+  let maxVal = null, maxIdx = -1;
+  EQ_MESES_LABELS.forEach((_,i)=>{ const v = getEqMonthPrevisto(i); if (v !== null && (maxVal === null || v > maxVal)){ maxVal = v; maxIdx = i; } });
+  if (maxVal === null){
+    document.getElementById('eq-kpi-pico-mes').textContent = 'Sem dado carregado';
+    document.getElementById('eq-kpi-pico-mes-quando').textContent = 'Use "Carregar da Nuvem"';
+  } else {
+    document.getElementById('eq-kpi-pico-mes').textContent = fmtNum(maxVal) + ' equipamentos';
+    document.getElementById('eq-kpi-pico-mes-quando').textContent = 'Previsto para ' + EQ_MESES_LABELS[maxIdx];
+  }
 
   let ultimoSlot = null;
   EQ_SLOTS.forEach((s) => { if (getEqSlotEntry(s) !== null){ ultimoSlot = s; } });
@@ -1253,6 +1306,12 @@ function renderEqKPIs(){
 /* ==================== TABELA FUNÇÕES ==================== */
 function renderTabelaFuncoes(){
   const tbody = document.getElementById('tbody-funcoes');
+  const sub = document.getElementById('funcoes-card-sub');
+  if (!FUNCOES.length){
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px;">Nenhum dado carregado — use "☁️ Carregar da Nuvem".</td></tr>`;
+    if (sub) sub.textContent = 'Nenhum dado carregado ainda';
+    return;
+  }
   const ordenado = [...FUNCOES].sort((a,b)=> b.pico - a.pico);
   tbody.innerHTML = ordenado.map(f => `
     <tr>
@@ -1262,6 +1321,7 @@ function renderTabelaFuncoes(){
       <td>${(f.pico/PICO_TEORICO*100).toFixed(1)}%</td>
     </tr>
   `).join('');
+  if (sub) sub.textContent = `${FUNCOES.length} funções cadastradas no histograma contratual · Ordenado por pico decrescente`;
 }
 
 /* ==================== TABELA LANÇAMENTOS ==================== */
@@ -1543,12 +1603,14 @@ document.getElementById('eq-btn-previsto-salvar').addEventListener('click', ()=>
 
 /* ==================== RESET PREVISTO ==================== */
 document.getElementById('btn-reset-previsto').addEventListener('click', ()=>{
-  if (confirm('Isso vai apagar todas as edições de Previsto por semana e por mês, voltando ao Previsto contratual original. Confirma?')){
+  if (confirm('Isso vai apagar todas as edições de Previsto por semana e por mês, e trazer de volta a curva de referência conhecida (extraída do Excel original) como Previsto. Confirma?')){
     previstoSemanal = {};
     previstoMensalOverride = {};
+    TOTAL_PREVISTO_BASE = TOTAL_PREVISTO_BASE_PADRAO.slice();
+    FUNCOES = FUNCOES_PADRAO.slice();
     salvarPrevistoSemanal();
     salvarPrevistoMensalOverride();
-    renderTudo();
+    aplicarPeriodoObra();
   }
 });
 
@@ -1563,12 +1625,13 @@ document.getElementById('btn-reset').addEventListener('click', ()=>{
 
 /* ==================== RESET PREVISTO / RESET — EQUIPAMENTOS ==================== */
 document.getElementById('eq-btn-reset-previsto').addEventListener('click', ()=>{
-  if (confirm('Isso vai apagar todas as edições de Previsto de equipamentos por semana e por mês, voltando à curva original. Confirma?')){
+  if (confirm('Isso vai apagar todas as edições de Previsto de equipamentos por semana e por mês, e trazer de volta a curva de referência conhecida (extraída da imagem original) como Previsto. Confirma?')){
     eqPrevistoSemanal = {};
     eqPrevistoMensalOverride = {};
+    EQ_TOTAL_PREVISTO_BASE = EQ_TOTAL_PREVISTO_BASE_PADRAO.slice();
     salvarEqPrevistoSemanal();
     salvarEqPrevistoMensalOverride();
-    renderTudo();
+    aplicarPeriodoObra();
   }
 });
 document.getElementById('eq-btn-reset').addEventListener('click', ()=>{
@@ -1586,6 +1649,11 @@ document.getElementById('eq-btn-export-png').addEventListener('click', ()=>{
   a.href = url;
   a.download = 'curva_equipamentos.png';
   a.click();
+});
+
+/* ==================== AVISO "SEM DADOS" (v13) ==================== */
+document.getElementById('btn-aviso-sem-dados-carregar').addEventListener('click', ()=>{
+  document.getElementById('btn-nuvem-carregar').click();
 });
 
 /* ==================== ABAS (Mão de Obra / Equipamentos) ==================== */
@@ -1694,9 +1762,9 @@ document.getElementById('btn-aplicar-periodo').addEventListener('click', aplicar
 /* ==================== EXPORT / IMPORT JSON ==================== */
 document.getElementById('btn-export-json').addEventListener('click', ()=>{
   const payload = {
-    versao:'2.0', exportado_em: new Date().toISOString(),
-    realizado, previstoSemanal, previstoMensalOverride,
-    eqRealizado, eqPrevistoSemanal, eqPrevistoMensalOverride
+    versao:'4.0', exportado_em: new Date().toISOString(),
+    realizado, previstoSemanal, previstoMensalOverride, totalPrevistoBase: TOTAL_PREVISTO_BASE, funcoes: FUNCOES,
+    eqRealizado, eqPrevistoSemanal, eqPrevistoMensalOverride, eqTotalPrevistoBase: EQ_TOTAL_PREVISTO_BASE
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
@@ -1714,16 +1782,19 @@ document.getElementById('import-input').addEventListener('change', (e)=>{
       realizado = data.realizado || {};
       previstoSemanal = data.previstoSemanal || {};
       previstoMensalOverride = data.previstoMensalOverride || {};
+      TOTAL_PREVISTO_BASE = data.totalPrevistoBase !== undefined ? data.totalPrevistoBase : TOTAL_PREVISTO_BASE_PADRAO.slice();
+      FUNCOES = data.funcoes !== undefined ? data.funcoes : FUNCOES_PADRAO.slice();
       eqRealizado = data.eqRealizado || {};
       eqPrevistoSemanal = data.eqPrevistoSemanal || {};
       eqPrevistoMensalOverride = data.eqPrevistoMensalOverride || {};
+      EQ_TOTAL_PREVISTO_BASE = data.eqTotalPrevistoBase !== undefined ? data.eqTotalPrevistoBase : EQ_TOTAL_PREVISTO_BASE_PADRAO.slice();
       salvarRealizado();
       salvarPrevistoSemanal();
       salvarPrevistoMensalOverride();
       salvarEqRealizado();
       salvarEqPrevistoSemanal();
       salvarEqPrevistoMensalOverride();
-      renderTudo();
+      aplicarPeriodoObra();
       alert('Dados importados com sucesso.');
     }catch(err){ alert('Arquivo inválido.'); }
   };
@@ -1743,14 +1814,23 @@ document.getElementById('btn-export-png').addEventListener('click', ()=>{
 // Estado completo salvo/restaurado na nuvem: lançamentos de Realizado, edições de
 // Previsto (semanal e override mensal) e o período da obra (início/término). O script
 // module (Firebase) abaixo usa estas duas funções para salvar e carregar versões.
+// Usado só para alertar o usuário, no momento de "Salvar Nova Versão", se ele ainda não
+// carregou nenhuma curva de Previsto (evita salvar/sobrescrever a nuvem com Previsto em branco
+// por engano).
+window.TOTAL_PREVISTO_BASE_vazio = function(){
+  return TOTAL_PREVISTO_BASE.every(v => v === null) && EQ_TOTAL_PREVISTO_BASE.every(v => v === null);
+};
 window.getEstadoParaNuvem = function(){
   return {
     realizado,
     previstoSemanal,
     previstoMensalOverride,
+    totalPrevistoBase: TOTAL_PREVISTO_BASE,
+    funcoes: FUNCOES,
     eqRealizado,
     eqPrevistoSemanal,
     eqPrevistoMensalOverride,
+    eqTotalPrevistoBase: EQ_TOTAL_PREVISTO_BASE,
     obraDataInicio: inputObraInicio.value,
     obraDataTermino: inputObraTermino.value
   };
@@ -1759,9 +1839,15 @@ window.aplicarEstadoDaNuvem = function(dados){
   realizado = dados.realizado || {};
   previstoSemanal = dados.previstoSemanal || {};
   previstoMensalOverride = dados.previstoMensalOverride || {};
+  // `totalPrevistoBase`/`funcoes` só não existem em versões salvas ANTES da v14/v15 — nesse
+  // caso, caem de volta para a curva/tabela de referência conhecida (não ficam em branco),
+  // para não "perder" o Previsto de versões antigas salvas na nuvem antes dessas mudanças.
+  TOTAL_PREVISTO_BASE = dados.totalPrevistoBase !== undefined ? dados.totalPrevistoBase : TOTAL_PREVISTO_BASE_PADRAO.slice();
+  FUNCOES = dados.funcoes !== undefined ? dados.funcoes : FUNCOES_PADRAO.slice();
   eqRealizado = dados.eqRealizado || {};
   eqPrevistoSemanal = dados.eqPrevistoSemanal || {};
   eqPrevistoMensalOverride = dados.eqPrevistoMensalOverride || {};
+  EQ_TOTAL_PREVISTO_BASE = dados.eqTotalPrevistoBase !== undefined ? dados.eqTotalPrevistoBase : EQ_TOTAL_PREVISTO_BASE_PADRAO.slice();
   salvarRealizado();
   salvarPrevistoSemanal();
   salvarPrevistoMensalOverride();
@@ -1773,6 +1859,10 @@ window.aplicarEstadoDaNuvem = function(dados){
     inputObraTermino.value = dados.obraDataTermino;
     aplicarPeriodoObra();
   } else {
+    // Sem datas de período no documento carregado (formato antigo) — ainda assim é preciso
+    // refletir a curva-base recém-carregada nos arrays efetivamente exibidos.
+    TOTAL_PREVISTO = TOTAL_PREVISTO_BASE.slice(0, MESES_LABELS.length);
+    EQ_TOTAL_PREVISTO = EQ_TOTAL_PREVISTO_BASE.slice(0, EQ_MESES_LABELS.length);
     renderTudo();
   }
 };
@@ -1823,11 +1913,13 @@ renderTudo();
     docIdAtual = id;
     nomeVersaoAtual = nome;
     if (id){
-      btnAtualizar.style.display = '';
+      btnAtualizar.disabled = false;
+      btnAtualizar.title = 'Sobrescreve a versão "' + (nome || '(sem nome)') + '" com os dados de agora';
       labelVersaoAtual.style.display = 'inline-flex';
       nomeVersaoAtualEl.textContent = nome || '(sem nome)';
     } else {
-      btnAtualizar.style.display = 'none';
+      btnAtualizar.disabled = true;
+      btnAtualizar.title = 'Carregue ou salve uma versão primeiro para poder atualizá-la';
       labelVersaoAtual.style.display = 'none';
     }
   }
@@ -1844,6 +1936,10 @@ renderTudo();
   btnSalvarConfirmar.addEventListener('click', async () => {
     const nome = inputNomeVersao.value.trim();
     if (!nome) { alert('Informe um nome para a versão.'); return; }
+    const semPrevistoCarregado = window.TOTAL_PREVISTO_BASE_vazio && window.TOTAL_PREVISTO_BASE_vazio();
+    if (semPrevistoCarregado){
+      if (!confirm('Você ainda não carregou nenhuma curva de Previsto da nuvem nesta sessão (os gráficos estão em branco). Salvar agora vai gravar essa versão SEM Previsto. Deseja continuar mesmo assim?')) return;
+    }
     btnSalvarConfirmar.disabled = true;
     btnSalvarConfirmar.textContent = 'Salvando…';
     try {
@@ -1894,6 +1990,8 @@ renderTudo();
             window.aplicarEstadoDaNuvem(dados);
             setVersaoAtual(docSnap.id, d.nome || '(sem nome)');
             modalCarregar.classList.remove('open');
+            const avisoSemDados = document.getElementById('aviso-sem-dados');
+            if (avisoSemDados) avisoSemDados.style.display = 'none';
           } catch (err) {
             alert('Não foi possível ler os dados dessa versão.');
           }
